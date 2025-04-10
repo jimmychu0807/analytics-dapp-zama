@@ -4,7 +4,7 @@ import "hardhat-deploy";
 import "hardhat-ignore-warnings";
 import { HardhatUserConfig, extendProvider } from "hardhat/config";
 import { task } from "hardhat/config";
-import type { NetworkUserConfig } from "hardhat/types";
+import type { NetworkUserConfig, HDAccountsUserConfig } from "hardhat/types";
 
 import CustomProvider from "./CustomProvider";
 // Adjust the import path as needed
