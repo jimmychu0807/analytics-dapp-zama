@@ -84,18 +84,20 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         uint256[] memory cts = new uint256[](2);
         cts[0] = Gateway.toUint256(encProposalId);
         cts[1] = Gateway.toUint256(encVotes);
-        Gateway.requestDecryption(cts, this.checkVoteCB.selector, 0, block.timestamp + 100, false);
+        Gateway.requestDecryption(cts, this.voteCB.selector, 0, block.timestamp + 100, false);
 
         // check the user hasn't voted on that proposal
         // check the current timestamp fall between start and end timestamp
         // check the vote is valid
     }
 
-    function checkVoteCB(uint256 reqId, uint64 proposalId, uint256 decVotes)
+    function voteCB(uint256 reqId, uint64 proposalId, uint256 decVotes)
         onlyGateway
         public
     {
         console.log("callback: {reqId: %s, proposalId: %s, votes: %s}", reqId, proposalId, decVotes);
+
+        require(proposalId < nextProposalId, "Invalid ProposalId");
     }
 }
 
