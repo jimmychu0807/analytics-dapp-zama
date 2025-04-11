@@ -52,6 +52,7 @@ describe("ConfidentialERC20", function () {
       encryptedTransferAmount.handles[0],
       encryptedTransferAmount.inputProof,
     );
+
     const t2 = await tx.wait();
     expect(t2?.status).to.eq(1);
 
