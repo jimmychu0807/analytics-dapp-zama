@@ -60,15 +60,13 @@ describe("Voting", function() {
     );
     await tx.wait();
 
-    const proposalId = 1;
+    const proposalId = 0;
 
     // Bob votes
     const instance = await createInstance();
     const signer = this.signers.bob;
     const signerAddr = await signer.getAddress();
     const encodedVote = encodeVote([5, 3, 2]);
-
-    // console.log("encodedVote:", encodedVote);
 
     const input = instance.createEncryptedInput(this.contractAddress, signerAddr);
     const inputs = await input.add64(proposalId).add256(encodedVote).encrypt();
@@ -81,6 +79,13 @@ describe("Voting", function() {
 
     await tx.wait();
     await awaitAllDecryptionResults();
+
+    // assert the signer has voted
+    const hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
+    expect(hasVoted).to.equal(true);
+
+    const votesLen = await this.votingContract.getVotesLen(proposalId);
+    expect(votesLen).to.equal(1);
   });
 })
 
