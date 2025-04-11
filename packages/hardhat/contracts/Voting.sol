@@ -27,11 +27,19 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
     event ProposalCreated(address indexed sender, uint64 indexed proposalId, uint256 startTime, uint256 endTime);
 
     // --- storage ---
-    address admin;
-    uint64 nextProposalId = 0;
+    address public admin;
+    uint64 public nextProposalId = 0;
     mapping(uint64 => Proposal) public proposals;
     mapping(uint64 => euint256[]) public votes;
     mapping(uint64 => address) public hasVoted;
+
+    // --- viewer ---
+    function getProposal(uint64 proposalId) public view returns (Proposal memory proposal) {
+        require(proposalId < nextProposalId, "Invalid proposalId");
+        proposal = proposals[proposalId];
+    }
+
+    // --- write function ---
 
     function newProposal(
         string calldata _question,
