@@ -17,6 +17,11 @@ struct Proposal {
     uint256 endTime;
 }
 
+struct TallyResult {
+    uint32[] optCount;
+    bool counted;
+}
+
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
     // --- constant ---
     uint16 public constant MAX_QUESTION_LEN = 512;
@@ -25,18 +30,26 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
     // --- event ---
     event ProposalCreated(address indexed sender, uint64 indexed proposalId, uint256 startTime, uint256 endTime);
+    event Voted(address indexed sender, uint64 indexed proposalId);
 
     // --- storage ---
     address public admin;
     uint64 public nextProposalId = 0;
     mapping(uint64 => Proposal) public proposals;
     mapping(uint64 => euint256[]) public votes;
-    mapping(uint64 => address) public hasVoted;
+    mapping(uint64 => mapping(address => bool)) public hasVoted;
+    mapping(uint64 => TallyResult) public tallyResults;
 
     // --- viewer ---
     function getProposal(uint64 proposalId) public view returns (Proposal memory proposal) {
         require(proposalId < nextProposalId, "Invalid proposalId");
         proposal = proposals[proposalId];
+    }
+
+    function getVotesLen(uint64 proposalId) public view returns(uint256 voteLen) {
+        require(proposalId < nextProposalId, "Invalid proposalId");
+        euint256[] memory proposalVotes = votes[proposalId];
+        voteLen = proposalVotes.length;
     }
 
     // --- write function ---
@@ -84,18 +97,63 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         uint256[] memory cts = new uint256[](2);
         cts[0] = Gateway.toUint256(encProposalId);
         cts[1] = Gateway.toUint256(encVotes);
-        Gateway.requestDecryption(cts, this.checkVoteCB.selector, 0, block.timestamp + 100, false);
-
-        // check the user hasn't voted on that proposal
-        // check the current timestamp fall between start and end timestamp
-        // check the vote is valid
+        uint256 reqId = Gateway.requestDecryption(cts, this.voteCB.selector, 0, block.timestamp + 100, false);
+        addParamsAddress(reqId, msg.sender);
     }
 
-    function checkVoteCB(uint256 reqId, uint64 proposalId, uint256 decVotes)
+    function voteCB(uint256 reqId, uint64 proposalId, uint256 decVotes)
         onlyGateway
         public
     {
-        console.log("callback: {reqId: %s, proposalId: %s, votes: %s}", reqId, proposalId, decVotes);
+        // console.log("callback: {reqId: %s, proposalId: %s, votes: %s}", reqId, proposalId, decVotes);
+        // Perform necessary check
+        address sender = getParamsAddress(reqId)[0];
+        // Proposal storage proposal = proposals[proposalId];
+
+        require(proposalId < nextProposalId, "Invalid ProposalId.");
+        require(!hasVoted[proposalId][sender], "Sender has voted already.");
+
+        Proposal storage proposal = proposals[proposalId];
+        uint256 currentTS = block.timestamp;
+
+        require(currentTS >= proposal.startTime, "The voting hasn't started yet.");
+        require(currentTS <= proposal.endTime, "The voting has ended already.");
+
+        // NX> check the vote bytes inside
+        bytes memory voteBytes = abi.encodePacked(bytes32(decVotes));
+        uint16 accVotePts = 0;
+        uint16 optLen = uint16(proposal.options.length);
+        for(uint8 idx = 0; idx < 32; idx++) {
+            uint8 val = uint8(voteBytes[idx]);
+
+            if (idx < optLen) {
+                require(val <= proposal.maxOptionPoints, "Exceed max option points.");
+                accVotePts += val;
+                require(accVotePts <= proposal.userVotePoints, "User vote points exceeded.");
+            } else {
+                require(val == 0, "Vote points allocated beyond options allowed.");
+            }
+        }
+
+        euint256 encVote = TFHE.asEuint256(decVotes);
+        TFHE.allowThis(encVote);
+
+        votes[proposalId].push(encVote);
+        hasVoted[proposalId][sender] = true;
+
+        emit Voted(sender, proposalId);
+    }
+
+    function tallyUp(uint64 proposalId) public view returns (uint32[] memory) {
+        require(proposalId < nextProposalId, "Invalid ProposalId.");
+        Proposal storage proposal = proposals[proposalId];
+
+        require (block.timestamp > proposal.endTime, "The vote has not ended yet.");
+
+        TallyResult storage result = tallyResults[proposalId];
+        if (result.counted) return result.optCount;
+
+        // NX> work on count the tally here
+        return result.optCount;
     }
 }
-
