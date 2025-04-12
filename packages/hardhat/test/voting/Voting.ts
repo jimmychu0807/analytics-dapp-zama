@@ -21,12 +21,12 @@ describe("Voting", function() {
   });
 
   it("should create a new proposal", async function() {
-    const currentTS = Date.now();
-    const endTS = currentTS + 10000 // in 10 sec
+    const currentTS = Math.floor(Date.now() / 1000);
+    const endTS = currentTS + 10 // in 10 sec
 
     let tx = this.votingContract.connect(this.signers.alice).newProposal(
       "Contributor Voting",
-      ["Ah Carl", "Daisy", "Jimmy"],
+      ["Alice", "Bob", "Carol"],
       10,
       5,
       currentTS,
@@ -40,19 +40,19 @@ describe("Voting", function() {
     // Test the storage and event emitted
     const proposalId = 0;
     const proposal = await this.votingContract.getProposal(proposalId);
-    expect(proposal.options).to.deep.equal(["Ah Carl", "Daisy", "Jimmy"]);
+    expect(proposal.options).to.deep.equal(["Alice", "Bob", "Carol"]);
 
     const nextProposalId = await this.votingContract.nextProposalId();
     expect(nextProposalId).to.equal(1);
   });
 
   it("should accept a vote", async function() {
-    const currentTS = Date.now();
-    const endTS = currentTS + 10000 // in 10 sec
+    const currentTS = Math.floor(Date.now() / 1000);
+    const endTS = currentTS + 60 // end in 60 sec
 
     let tx = await this.votingContract.connect(this.signers.alice).newProposal(
       "Contributor Voting",
-      ["Ah Carl", "Daisy", "Jimmy"],
+      ["Alice", "Bob", "Carol"],
       10,
       5,
       currentTS,
@@ -87,16 +87,79 @@ describe("Voting", function() {
     const votesLen = await this.votingContract.getVotesLen(proposalId);
     expect(votesLen).to.equal(1);
   });
+
+  it("invalid vote should not be accepted", async function() {
+    const currentTS = Math.floor(Date.now() / 1000);
+    const endTS = currentTS + 60 // end in 60 sec
+
+    let tx = await this.votingContract.connect(this.signers.alice).newProposal(
+      "Contributor Voting",
+      ["Alice", "Bob", "Carol"],
+      10,
+      5,
+      currentTS,
+      endTS
+    );
+    await tx.wait();
+
+    const proposalId = 0;
+
+    // Bob votes
+    const instance = await createInstance();
+    const signer = this.signers.bob;
+    const signerAddr = await signer.getAddress();
+    const encodedVote1 = encodeVote([5, 5, 5]);
+
+    const input = instance.createEncryptedInput(this.contractAddress, signerAddr);
+    const inputs = await input.add64(proposalId).add256(encodedVote1).encrypt();
+
+    tx = await this.votingContract.connect(this.signers.bob).vote(
+      inputs.handles[0],
+      inputs.handles[1],
+      inputs.inputProof
+    );
+
+    await tx.wait();
+    await awaitAllDecryptionResults();
+
+    // assert the signer has not voted
+    let hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
+    expect(hasVoted).to.equal(false);
+
+    let votesLen = await this.votingContract.getVotesLen(proposalId);
+    expect(votesLen).to.equal(0);
+
+    // -- Next encodedVote2 --
+    const encodedVote2 = encodeVote([5, 5, 5, 5]);
+    const inputs2 = await input.add64(proposalId).add256(encodedVote2).encrypt();
+
+    tx = await this.votingContract.connect(this.signers.bob).vote(
+      inputs2.handles[0],
+      inputs2.handles[1],
+      inputs2.inputProof
+    );
+
+    await tx.wait();
+    await awaitAllDecryptionResults();
+
+    // assert the signer has not voted
+    hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
+    expect(hasVoted).to.equal(false);
+
+    votesLen = await this.votingContract.getVotesLen(proposalId);
+    expect(votesLen).to.equal(0);
+  });
 })
 
 function encodeVote(votes: number[]): bigint {
-  let voteInHex = "";
-  for (const oneVote of votes) {
-    let voteHex = oneVote.toString(16);
-    voteHex = voteHex.length === 1 ? `0${voteHex}` : voteHex;
-    voteInHex = `${voteHex}${voteInHex}`;
-  }
-  voteInHex = `0x${voteInHex}`;
+  const expandedVotes = [...votes, ...Array(32 - votes.length).fill(0)];
+  const voteBytes = hre.ethers.solidityPacked(
+    [ 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
+      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
+      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
+      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8' ],
+    expandedVotes
+  );
 
-  return BigInt(voteInHex);
+  return BigInt(voteBytes);
 }

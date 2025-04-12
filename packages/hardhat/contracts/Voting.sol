@@ -5,7 +5,7 @@ import "fhevm/lib/TFHE.sol";
 import {SepoliaZamaFHEVMConfig} from "fhevm/config/ZamaFHEVMConfig.sol";
 import {SepoliaZamaGatewayConfig} from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
-// import {console} from "hardhat/console.sol";
+import {console} from "hardhat/console.sol";
 
 struct Proposal {
     address admin;
@@ -15,6 +15,11 @@ struct Proposal {
     uint16 maxOptionPoints;
     uint256 startTime;
     uint256 endTime;
+}
+
+struct TallyResult {
+    uint32[] optCount;
+    bool counted;
 }
 
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
@@ -33,6 +38,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
     mapping(uint64 => Proposal) public proposals;
     mapping(uint64 => euint256[]) public votes;
     mapping(uint64 => mapping(address => bool)) public hasVoted;
+    mapping(uint64 => TallyResult) public tallyResults;
 
     // --- viewer ---
     function getProposal(uint64 proposalId) public view returns (Proposal memory proposal) {
@@ -106,7 +112,28 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
         require(proposalId < nextProposalId, "Invalid ProposalId.");
         require(!hasVoted[proposalId][sender], "Sender has voted already.");
-        // TODO: check the vote bytes inside
+
+        Proposal storage proposal = proposals[proposalId];
+        uint256 currentTS = block.timestamp;
+
+        require(currentTS >= proposal.startTime, "The voting hasn't started yet.");
+        require(currentTS <= proposal.endTime, "The voting has ended already.");
+
+        // NX> check the vote bytes inside
+        bytes memory voteBytes = abi.encodePacked(bytes32(decVotes));
+        uint16 accVotePts = 0;
+        uint16 optLen = uint16(proposal.options.length);
+        for(uint8 idx = 0; idx < 32; idx++) {
+            uint8 val = uint8(voteBytes[idx]);
+
+            if (idx < optLen) {
+                require(val <= proposal.maxOptionPoints, "Exceed max option points.");
+                accVotePts += val;
+                require(accVotePts <= proposal.userVotePoints, "User vote points exceeded.");
+            } else {
+                require(val == 0, "Vote points allocated beyond options allowed.");
+            }
+        }
 
         euint256 encVote = TFHE.asEuint256(decVotes);
         TFHE.allowThis(encVote);
@@ -115,5 +142,18 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         hasVoted[proposalId][sender] = true;
 
         emit Voted(sender, proposalId);
+    }
+
+    function tallyUp(uint64 proposalId) public view returns (uint32[] memory) {
+        require(proposalId < nextProposalId, "Invalid ProposalId.");
+        Proposal storage proposal = proposals[proposalId];
+
+        require (block.timestamp > proposal.endTime, "The vote has not ended yet.");
+
+        TallyResult storage result = tallyResults[proposalId];
+        if (result.counted) return result.optCount;
+
+        // NX> work on count the tally here
+        return result.optCount;
     }
 }
