@@ -3,6 +3,7 @@ import hre from "hardhat";
 import { getSigners, initSigners } from "../signers";
 import { createInstance } from "../instance";
 import { initGateway, awaitAllDecryptionResults } from "../asyncDecrypt";
+import { reencryptEuint64 } from "../reencrypt";
 import { Gender, Continent } from "./meta";
 
 describe("Voting", function() {
@@ -61,7 +62,7 @@ describe("Voting", function() {
     const votesLen = await ctx.votingContract.getVotesLen(proposalId);
     expect(votesLen).to.equal(voteData.length);
 
-    return { voteData };
+    return { instance, proposalId, voteData };
   }
 
   beforeEach(async function() {
@@ -142,6 +143,21 @@ describe("Voting", function() {
   });
 
   it("able to tally up", async function() {
-    const { voteData } = await loadProposalAndVotesFixture(this);
+    const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
+
+    await this.votingContract.connect(this.signers.alice).tallyUp(proposalId, 'SUM');
+    const aliceAddr = await this.signers.alice.getAddress();
+    const encryptedHandle = await this.votingContract.tallyResults(aliceAddr);
+
+    // Read the value back with reencryption
+    const tallyResult = await reencryptEuint64(
+      this.signers.alice,
+      instance,
+      encryptedHandle,
+      this.contractAddress
+    )
+
+    const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
+    expect(tallyResult).to.equal(sum);
   });
 });
