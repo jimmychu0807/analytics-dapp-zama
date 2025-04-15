@@ -5,16 +5,17 @@ import "fhevm/lib/TFHE.sol";
 import {SepoliaZamaFHEVMConfig} from "fhevm/config/ZamaFHEVMConfig.sol";
 import {SepoliaZamaGatewayConfig} from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
+import {LibString} from "solady/src/utils/LibString.sol";
+
 import {console} from "hardhat/console.sol";
 
 struct Proposal {
     address admin;
     string question;
-    string[] options;
-    uint16 userVotePoints;
-    uint16 maxOptionPoints;
+    string[] metaOpts;
     uint256 startTime;
     uint256 endTime;
+    uint64 thresholdToTally;
 }
 
 struct TallyResult {
@@ -22,23 +23,31 @@ struct TallyResult {
     bool counted;
 }
 
+struct Vote {
+    euint64 rating;
+    euint64[] metaVals;
+}
+
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
+    using LibString for string;
+    // -- enum --
+
+
     // --- constant ---
     uint16 public constant MAX_QUESTION_LEN = 512;
-    uint16 public constant MAX_VOTE_PTS = 255;
     uint16 public constant MAX_OPTIONS = 32;
 
     // --- event ---
     event ProposalCreated(address indexed sender, uint64 indexed proposalId, uint256 startTime, uint256 endTime);
-    event Voted(address indexed sender, uint64 indexed proposalId);
+    event VoteCasted(address indexed sender, uint64 indexed proposalId);
 
     // --- storage ---
     address public admin;
     uint64 public nextProposalId = 0;
     mapping(uint64 => Proposal) public proposals;
-    mapping(uint64 => euint256[]) public votes;
+    mapping(uint64 => Vote[]) public proposalVotes;
     mapping(uint64 => mapping(address => bool)) public hasVoted;
-    mapping(uint64 => TallyResult) public tallyResults;
+    mapping(address => euint64) public tallyResults;
 
     // --- viewer ---
     function getProposal(uint64 proposalId) public view returns (Proposal memory proposal) {
@@ -48,34 +57,30 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
     function getVotesLen(uint64 proposalId) public view returns(uint256 voteLen) {
         require(proposalId < nextProposalId, "Invalid proposalId");
-        euint256[] memory proposalVotes = votes[proposalId];
-        voteLen = proposalVotes.length;
+        Vote[] memory oneProposalVotes = proposalVotes[proposalId];
+        voteLen = oneProposalVotes.length;
     }
 
     // --- write function ---
 
     function newProposal(
         string calldata _question,
-        string[] calldata _options,
-        uint16 _userVotePoints,
-        uint16 _maxOptionPoints,
+        string[] calldata _metaOpts,
+        uint64 _thresholdToTally,
         uint256 _startTime,
         uint256 _endTime
     ) public returns (Proposal memory proposal) {
         require (bytes(_question).length <= MAX_QUESTION_LEN, "Question exceed 512 bytes");
-        require(_options.length <= MAX_OPTIONS, "Options exceed 32 options");
-        require(_userVotePoints <= MAX_VOTE_PTS, "User vote points exceed 1000");
-        require(_maxOptionPoints <= MAX_VOTE_PTS, "Option max vote points exceed 1000");
+        require(_metaOpts.length <= MAX_OPTIONS, "Options exceed 32 options");
         require(_startTime < _endTime, "Start time is gte to end time");
 
         proposal = Proposal({
             admin: msg.sender,
             question: _question,
-            options: _options,
-            userVotePoints: _userVotePoints,
-            maxOptionPoints: _maxOptionPoints,
+            metaOpts: _metaOpts,
             startTime: _startTime,
-            endTime: _endTime
+            endTime: _endTime,
+            thresholdToTally: _thresholdToTally
         });
 
         uint64 proposalId = nextProposalId;
@@ -85,75 +90,63 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         emit ProposalCreated(msg.sender, proposalId, _startTime, _endTime);
     }
 
-    function vote(
-        einput eInProposalId,
-        einput eInVotes,
+    function castVote(
+        uint64 proposalId,
+        einput rating,
+        einput optVal1,
+        einput optVal2,
+        einput optVal3,
         bytes calldata inputProof
     ) public {
-        // check proposal exist
-        euint64 encProposalId = TFHE.asEuint64(eInProposalId, inputProof);
-        euint256 encVotes = TFHE.asEuint256(eInVotes, inputProof);
-
-        uint256[] memory cts = new uint256[](2);
-        cts[0] = Gateway.toUint256(encProposalId);
-        cts[1] = Gateway.toUint256(encVotes);
-        uint256 reqId = Gateway.requestDecryption(cts, this.voteCB.selector, 0, block.timestamp + 100, false);
-        addParamsAddress(reqId, msg.sender);
-    }
-
-    function voteCB(uint256 reqId, uint64 proposalId, uint256 decVotes)
-        onlyGateway
-        public
-    {
-        // console.log("callback: {reqId: %s, proposalId: %s, votes: %s}", reqId, proposalId, decVotes);
-        // Perform necessary check
-        address sender = getParamsAddress(reqId)[0];
-        // Proposal storage proposal = proposals[proposalId];
-
         require(proposalId < nextProposalId, "Invalid ProposalId.");
-        require(!hasVoted[proposalId][sender], "Sender has voted already.");
+        require(!hasVoted[proposalId][msg.sender], "Sender has voted already.");
 
         Proposal storage proposal = proposals[proposalId];
         uint256 currentTS = block.timestamp;
-
         require(currentTS >= proposal.startTime, "The voting hasn't started yet.");
         require(currentTS <= proposal.endTime, "The voting has ended already.");
 
-        // NX> check the vote bytes inside
-        bytes memory voteBytes = abi.encodePacked(bytes32(decVotes));
-        uint16 accVotePts = 0;
-        uint16 optLen = uint16(proposal.options.length);
-        for(uint8 idx = 0; idx < 32; idx++) {
-            uint8 val = uint8(voteBytes[idx]);
+        euint64[] memory metaVals = new euint64[](3);
+        metaVals[0] = TFHE.asEuint64(optVal1, inputProof);
+        metaVals[1] = TFHE.asEuint64(optVal2, inputProof);
+        metaVals[2] = TFHE.asEuint64(optVal3, inputProof);
 
-            if (idx < optLen) {
-                require(val <= proposal.maxOptionPoints, "Exceed max option points.");
-                accVotePts += val;
-                require(accVotePts <= proposal.userVotePoints, "User vote points exceeded.");
-            } else {
-                require(val == 0, "Vote points allocated beyond options allowed.");
+        Vote memory vote = Vote({
+            rating: TFHE.asEuint64(rating, inputProof),
+            metaVals: metaVals
+        });
+
+        TFHE.allowThis(vote.rating);
+        TFHE.allowThis(vote.metaVals[0]);
+        TFHE.allowThis(vote.metaVals[1]);
+        TFHE.allowThis(vote.metaVals[2]);
+
+        proposalVotes[proposalId].push(vote);
+        hasVoted[proposalId][msg.sender] = true;
+
+        emit VoteCasted(msg.sender, proposalId);
+    }
+
+    function tallyUp(
+        uint64 proposalId,
+        string calldata op
+    ) public {
+        require(proposalId < nextProposalId, "Invalid ProposalId.");
+
+        Proposal storage proposal = proposals[proposalId];
+        Vote[] storage oneProposalVotes = proposalVotes[proposalId];
+        uint256 voteLen = oneProposalVotes.length;
+        require(voteLen >= proposal.thresholdToTally, "Vote threshold not reached yet");
+
+        euint64 acc = TFHE.asEuint64(0);
+
+        if (op.eq('SUM')) {
+            for (uint256 idx = 0; idx < voteLen; idx += 1) {
+                euint64 val = TFHE.select(TFHE.asEbool(true), oneProposalVotes[idx].rating, TFHE.asEuint64(0));
+                acc = TFHE.add(acc, val);
             }
         }
 
-        euint256 encVote = TFHE.asEuint256(decVotes);
-        TFHE.allowThis(encVote);
-
-        votes[proposalId].push(encVote);
-        hasVoted[proposalId][sender] = true;
-
-        emit Voted(sender, proposalId);
-    }
-
-    function tallyUp(uint64 proposalId) public view returns (uint32[] memory) {
-        require(proposalId < nextProposalId, "Invalid ProposalId.");
-        Proposal storage proposal = proposals[proposalId];
-
-        require (block.timestamp > proposal.endTime, "The vote has not ended yet.");
-
-        TallyResult storage result = tallyResults[proposalId];
-        if (result.counted) return result.optCount;
-
-        // NX> work on count the tally here
-        return result.optCount;
+        tallyResults[msg.sender] = acc;
     }
 }
