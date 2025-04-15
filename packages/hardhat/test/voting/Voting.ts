@@ -3,6 +3,7 @@ import hre from "hardhat";
 import { getSigners, initSigners } from "../signers";
 import { createInstance } from "../instance";
 import { initGateway, awaitAllDecryptionResults } from "../asyncDecrypt";
+import { Gender, Continent } from "./meta";
 
 describe("Voting", function() {
   before(async function() {
@@ -11,6 +12,57 @@ describe("Voting", function() {
 
     await initGateway();
   });
+
+  async function loadProposalAndVotesFixture(ctx: Mocha.Context) {
+    const currentTS = Math.floor(Date.now() / 1000);
+    const endTS = currentTS + 100 // in 30 sec
+
+    await ctx.votingContract.connect(ctx.signers.alice).newProposal(
+      "How would you rate alice?",
+      ["Gender", "Continet", "Age"],
+      5,
+      currentTS,
+      endTS,
+    );
+
+    // Bob votes
+    const proposalId = 0;
+
+    const voteData = [
+      [ctx.signers.alice, 5, Gender.Male, Continent.Asia, 44],
+      [ctx.signers.bob, 8, Gender.Male, Continent.Asia, 25],
+      [ctx.signers.carol, 2, Gender.Female, Continent.Europe, 30],
+      [ctx.signers.dave, 4, Gender.Female, Continent.Europe, 35],
+      [ctx.signers.eve, 10, Gender.Female, Continent.Europe, 40],
+    ];
+    const instance = await createInstance();
+
+    for (const oneVoteData of voteData) {
+      const signer = oneVoteData[0];
+      const signerAddr = await signer.getAddress();
+      const input = instance.createEncryptedInput(ctx.contractAddress, signerAddr);
+      const inputs = await input
+        .add64(oneVoteData[1])
+        .add64(oneVoteData[2])
+        .add64(oneVoteData[3])
+        .add64(oneVoteData[4])
+        .encrypt();
+
+      await ctx.votingContract.connect(oneVoteData[0]).castVote(
+        proposalId,
+        inputs.handles[0],
+        inputs.handles[1],
+        inputs.handles[2],
+        inputs.handles[3],
+        inputs.inputProof
+      );
+    }
+
+    const votesLen = await ctx.votingContract.getVotesLen(proposalId);
+    expect(votesLen).to.equal(voteData.length);
+
+    return { voteData };
+  }
 
   beforeEach(async function() {
     const contractFactory = await hre.ethers.getContractFactory("Voting");
@@ -22,15 +74,14 @@ describe("Voting", function() {
 
   it("should create a new proposal", async function() {
     const currentTS = Math.floor(Date.now() / 1000);
-    const endTS = currentTS + 10 // in 10 sec
+    const endTS = currentTS + 100 // in 30 sec
 
     let tx = this.votingContract.connect(this.signers.alice).newProposal(
-      "Contributor Voting",
-      ["Alice", "Bob", "Carol"],
-      10,
+      "How would you rate alice?",
+      ["Gender", "Continet", "Age"],
       5,
       currentTS,
-      endTS
+      endTS,
     );
 
     await expect(tx)
@@ -40,7 +91,7 @@ describe("Voting", function() {
     // Test the storage and event emitted
     const proposalId = 0;
     const proposal = await this.votingContract.getProposal(proposalId);
-    expect(proposal.options).to.deep.equal(["Alice", "Bob", "Carol"]);
+    expect(proposal.metaOpts).to.deep.equal(["Gender", "Continet", "Age"]);
 
     const nextProposalId = await this.votingContract.nextProposalId();
     expect(nextProposalId).to.equal(1);
@@ -48,38 +99,40 @@ describe("Voting", function() {
 
   it("should accept a vote", async function() {
     const currentTS = Math.floor(Date.now() / 1000);
-    const endTS = currentTS + 60 // end in 60 sec
+    const endTS = currentTS + 100 // end in 30 sec
 
     let tx = await this.votingContract.connect(this.signers.alice).newProposal(
-      "Contributor Voting",
-      ["Alice", "Bob", "Carol"],
-      10,
+      "How would you rate alice?",
+      ["Gender", "Continent", "Age"],
       5,
       currentTS,
-      endTS
+      endTS,
     );
-    await tx.wait();
-
-    const proposalId = 0;
 
     // Bob votes
+    const proposalId = 0;
     const instance = await createInstance();
     const signer = this.signers.bob;
     const signerAddr = await signer.getAddress();
-    const encodedVote = encodeVote([5, 3, 2]);
 
     const input = instance.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add64(proposalId).add256(encodedVote).encrypt();
+    const inputs = await input
+      .add64(5)
+      .add64(Gender.Male)
+      .add64(Continent.Asia)
+      .add64(44)
+      .encrypt();
 
-    tx = await this.votingContract.connect(this.signers.bob).vote(
+    tx = await this.votingContract.connect(this.signers.bob).castVote(
+      proposalId,
       inputs.handles[0],
       inputs.handles[1],
+      inputs.handles[2],
+      inputs.handles[3],
       inputs.inputProof
     );
 
     await tx.wait();
-    await awaitAllDecryptionResults();
-
     // assert the signer has voted
     const hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
     expect(hasVoted).to.equal(true);
@@ -88,78 +141,7 @@ describe("Voting", function() {
     expect(votesLen).to.equal(1);
   });
 
-  it("invalid vote should not be accepted", async function() {
-    const currentTS = Math.floor(Date.now() / 1000);
-    const endTS = currentTS + 60 // end in 60 sec
-
-    let tx = await this.votingContract.connect(this.signers.alice).newProposal(
-      "Contributor Voting",
-      ["Alice", "Bob", "Carol"],
-      10,
-      5,
-      currentTS,
-      endTS
-    );
-    await tx.wait();
-
-    const proposalId = 0;
-
-    // Bob votes
-    const instance = await createInstance();
-    const signer = this.signers.bob;
-    const signerAddr = await signer.getAddress();
-    const encodedVote1 = encodeVote([5, 5, 5]);
-
-    const input = instance.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add64(proposalId).add256(encodedVote1).encrypt();
-
-    tx = await this.votingContract.connect(this.signers.bob).vote(
-      inputs.handles[0],
-      inputs.handles[1],
-      inputs.inputProof
-    );
-
-    await tx.wait();
-    await awaitAllDecryptionResults();
-
-    // assert the signer has not voted
-    let hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
-    expect(hasVoted).to.equal(false);
-
-    let votesLen = await this.votingContract.getVotesLen(proposalId);
-    expect(votesLen).to.equal(0);
-
-    // -- Next encodedVote2 --
-    const encodedVote2 = encodeVote([5, 5, 5, 5]);
-    const inputs2 = await input.add64(proposalId).add256(encodedVote2).encrypt();
-
-    tx = await this.votingContract.connect(this.signers.bob).vote(
-      inputs2.handles[0],
-      inputs2.handles[1],
-      inputs2.inputProof
-    );
-
-    await tx.wait();
-    await awaitAllDecryptionResults();
-
-    // assert the signer has not voted
-    hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
-    expect(hasVoted).to.equal(false);
-
-    votesLen = await this.votingContract.getVotesLen(proposalId);
-    expect(votesLen).to.equal(0);
+  it("able to tally up", async function() {
+    const { voteData } = await loadProposalAndVotesFixture(this);
   });
-})
-
-function encodeVote(votes: number[]): bigint {
-  const expandedVotes = [...votes, ...Array(32 - votes.length).fill(0)];
-  const voteBytes = hre.ethers.solidityPacked(
-    [ 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
-      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
-      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8',
-      'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'uint8' ],
-    expandedVotes
-  );
-
-  return BigInt(voteBytes);
-}
+});
