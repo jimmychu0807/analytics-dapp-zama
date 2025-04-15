@@ -140,13 +140,15 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
         euint64 acc = TFHE.asEuint64(0);
 
-        if (op.eq('SUM')) {
-            for (uint256 idx = 0; idx < voteLen; idx += 1) {
-                euint64 val = TFHE.select(TFHE.asEbool(true), oneProposalVotes[idx].rating, TFHE.asEuint64(0));
-                acc = TFHE.add(acc, val);
-            }
+        for (uint256 idx = 0; idx < voteLen; idx += 1) {
+            ebool isSUM =  TFHE.asEbool(op.eq('SUM'));
+            euint64 val = TFHE.select(isSUM, oneProposalVotes[idx].rating, TFHE.asEuint64(0));
+            acc = TFHE.add(acc, val);
         }
 
         tallyResults[msg.sender] = acc;
+
+        TFHE.allowThis(acc);
+        TFHE.allow(acc, msg.sender);
     }
 }
