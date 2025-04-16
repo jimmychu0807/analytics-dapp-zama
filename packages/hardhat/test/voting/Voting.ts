@@ -142,7 +142,7 @@ describe("Voting", function() {
     expect(votesLen).to.equal(1);
   });
 
-  it("able to tally up", async function() {
+  it("able to query", async function() {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
 
     const aliceAddr = await this.signers.alice.getAddress();
@@ -151,17 +151,17 @@ describe("Voting", function() {
       .add64(Gender.Male)
       .encrypt();
 
-    await this.votingContract.connect(this.signers.alice).tallyUp(
+    await this.votingContract.connect(this.signers.alice).query(
       proposalId,
       'SUM',
       { opt: 0, op: 'EQ', handle: inputs.handles[0] },
       inputs.inputProof
     );
 
-    const encryptedHandle = await this.votingContract.tallyResults(aliceAddr);
+    const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
 
     // Read the value back with reencryption
-    const tallyResult = await reencryptEuint64(
+    const queryResult = await reencryptEuint64(
       this.signers.alice,
       instance,
       encryptedHandle,
@@ -171,6 +171,6 @@ describe("Voting", function() {
     const sum = voteData
       .filter((oneVote) => oneVote[2] === Gender.Male)
       .reduce((acc, oneVote) => acc + oneVote[1], 0);
-    expect(tallyResult).to.equal(sum);
+    expect(queryResult).to.equal(sum);
   });
 });
