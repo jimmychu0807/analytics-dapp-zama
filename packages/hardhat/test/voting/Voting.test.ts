@@ -4,7 +4,7 @@ import { getSigners, initSigners } from "../signers";
 import { createInstance } from "../instance";
 import { initGateway, awaitAllDecryptionResults } from "../asyncDecrypt";
 import { reencryptEuint64 } from "../reencrypt";
-import { Gender, Continent } from "./meta";
+import { Gender, Continent, AggregateOp, PredicateOp } from "./types";
 
 describe("Voting", function() {
   before(async function() {
@@ -140,7 +140,7 @@ describe("Voting", function() {
 
     const aliceAddr = await this.signers.alice.getAddress();
     await this.votingContract.connect(this.signers.alice).query(
-      proposalId, 'SUM', [], "0x"
+      proposalId, AggregateOp.SUM, [], "0x"
     );
 
     const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
@@ -168,8 +168,8 @@ describe("Voting", function() {
       .encrypt();
 
     await this.votingContract.connect(this.signers.alice).query(
-      proposalId, 'SUM', [
-        { metaOpt: 0, op: 'EQ', handle: inputs.handles[0] }
+      proposalId, AggregateOp.SUM, [
+        { metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] }
       ], inputs.inputProof
     );
 
@@ -202,9 +202,9 @@ describe("Voting", function() {
       .encrypt();
 
     await this.votingContract.connect(this.signers.alice).query(
-      proposalId, 'SUM', [
-        { metaOpt: 0, op: 'EQ', handle: inputs.handles[0] },
-        { metaOpt: 2, op: 'GT', handle: inputs.handles[1] }
+      proposalId, AggregateOp.SUM, [
+        { metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] },
+        { metaOpt: 2, op: PredicateOp.GT, handle: inputs.handles[1] }
       ], inputs.inputProof
     );
 

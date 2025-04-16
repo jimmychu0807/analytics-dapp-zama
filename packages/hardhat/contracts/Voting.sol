@@ -5,39 +5,14 @@ import "fhevm/lib/TFHE.sol";
 import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
 import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
-import { LibString } from "solady/src/utils/LibString.sol";
+import { IVoting } from "./interfaces/IVoting.sol";
 // import { console } from "hardhat/console.sol";
 
-struct Proposal {
-    address admin;
-    string question;
-    string[] metaOpts;
-    uint256 startTime;
-    uint256 endTime;
-    uint64 thresholdToTally;
-}
-
-struct Predicate {
-    uint64 metaOpt;
-    string op;
-    einput handle;
-}
-
-struct Vote {
-    euint64 rating;
-    euint64[] metaVals;
-}
-
-contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
-    using LibString for string;
+contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IVoting {
 
     // --- constant ---
     uint16 public constant MAX_QUESTION_LEN = 512;
     uint16 public constant MAX_OPTIONS = 32;
-
-    // --- event ---
-    event ProposalCreated(address indexed sender, uint64 indexed proposalId, uint256 startTime, uint256 endTime);
-    event VoteCasted(address indexed sender, uint64 indexed proposalId);
 
     // --- storage ---
     address public admin;
@@ -127,7 +102,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
     function query(
         uint64 proposalId,
-        string calldata op,
+        AggregateOp aggOp,
         Predicate[] calldata predicates,
         bytes calldata inputProof
     ) public {
@@ -174,25 +149,25 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         euint64 predicateVal = TFHE.asEuint64(predicate.handle, inputProof);
 
         ebool isEQ = TFHE.select(
-            TFHE.asEbool(predicate.op.eq('EQ')),
+            TFHE.asEbool(predicate.op == PredicateOp.EQ),
             TFHE.eq(checkVal, predicateVal),
             eFalse
         );
 
         ebool isNE = TFHE.select(
-            TFHE.asEbool(predicate.op.eq('NE')),
+            TFHE.asEbool(predicate.op == PredicateOp.NE),
             TFHE.ne(checkVal, predicateVal),
             eFalse
         );
 
         ebool isGT = TFHE.select(
-            TFHE.asEbool(predicate.op.eq('GT')),
+            TFHE.asEbool(predicate.op == PredicateOp.GT),
             TFHE.gt(checkVal, predicateVal),
             eFalse
         );
 
         ebool isLT = TFHE.select(
-            TFHE.asEbool(predicate.op.eq('LT')),
+            TFHE.asEbool(predicate.op == PredicateOp.LT),
             TFHE.lt(checkVal, predicateVal),
             eFalse
         );
