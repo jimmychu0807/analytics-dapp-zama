@@ -118,6 +118,7 @@ const config: HardhatUserConfig = {
       },
       // Disable the optimizer when debugging
       // https://hardhat.org/hardhat-network/#solidity-optimizer-support
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 800,

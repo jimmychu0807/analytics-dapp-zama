@@ -10,5 +10,20 @@ export enum Continent {
   SouthAmerica = 4,
   Europe = 5,
   Australia = 6,
-  Antarctica = 7
+  Antarctica = 7,
+}
+
+export enum AggregateOp {
+  COUNT,
+  SUM,
+  MIN,
+  MAX,
+  AVG,
+}
+
+export enum PredicateOp {
+  EQ,
+  NE,
+  GT,
+  LT,
 }

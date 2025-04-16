@@ -6,11 +6,7 @@ settings:
 
 importers:
 
-  .:
-    dependencies:
-      '@openzeppelin/contracts':
-        specifier: ^5.0.2
-        version: 5.1.0
+  .: {}
 
   packages/hardhat:
     dependencies:

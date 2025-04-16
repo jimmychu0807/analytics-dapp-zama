@@ -17,11 +17,12 @@
     "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",
+    "lint:ts:fix": "eslint --fix .",
     "postinstall": "pnpm typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
-    "test": "hardhat test --network hardhat test/voting/Voting.ts",
+    "test": "hardhat test --network hardhat test/voting/Voting.test.ts",
     "test:all": "hardhat test --network hardhat",
     "coverage": "hardhat coverage",
     "deploy-sepolia": "hardhat deploy --network sepolia"

@@ -25,23 +25,8 @@
   "publishConfig": {
     "access": "private"
   },
-  "scripts": {
-    "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
-    "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat compile",
-    "lint": "pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
-    "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
-    "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
-    "lint:ts": "eslint .",
-    "postinstall": "DOTENV_CONFIG_PATH=./.env.example pnpm typechain",
-    "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
-    "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
-    "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
-    "test": "hardhat test --network hardhat",
-    "coverage": "hardhat coverage",
-    "deploy-sepolia": "hardhat deploy --network sepolia"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.0.2"
+  "pnpm": {
+    "onlyBuiltDependencies": ["bigint-buffer", "keccak", "secp256k1", "sqlite3"]
   },
   "packageManager": "pnpm@10.8.0+sha512.0e82714d1b5b43c74610193cb20734897c1d00de89d0e18420aebc5977fa13d780a9cb05734624e81ebd81cc876cd464794850641c48b9544326b5622ca29971"
 }
