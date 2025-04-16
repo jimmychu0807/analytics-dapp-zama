@@ -9,7 +9,6 @@ import { IVoting } from "./interfaces/IVoting.sol";
 // import { console } from "hardhat/console.sol";
 
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IVoting {
-
     // --- constant ---
     uint16 public constant MAX_QUESTION_LEN = 512;
     uint16 public constant MAX_OPTIONS = 32;
@@ -28,7 +27,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         proposal = proposals[proposalId];
     }
 
-    function getVotesLen(uint64 proposalId) public view returns(uint256 voteLen) {
+    function getVotesLen(uint64 proposalId) public view returns (uint256 voteLen) {
         require(proposalId < nextProposalId, "Invalid proposalId");
         Vote[] memory oneProposalVotes = proposalVotes[proposalId];
         voteLen = oneProposalVotes.length;
@@ -43,7 +42,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         uint256 _startTime,
         uint256 _endTime
     ) public returns (Proposal memory proposal) {
-        require (bytes(_question).length <= MAX_QUESTION_LEN, "Question exceed 512 bytes");
+        require(bytes(_question).length <= MAX_QUESTION_LEN, "Question exceed 512 bytes");
         require(_metaOpts.length <= MAX_OPTIONS, "Options exceed 32 options");
         require(_startTime < _endTime, "Start time is gte to end time");
 
@@ -84,10 +83,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         metaVals[1] = TFHE.asEuint64(optVal2, inputProof);
         metaVals[2] = TFHE.asEuint64(optVal3, inputProof);
 
-        Vote memory vote = Vote({
-            rating: TFHE.asEuint64(rating, inputProof),
-            metaVals: metaVals
-        });
+        Vote memory vote = Vote({ rating: TFHE.asEuint64(rating, inputProof), metaVals: metaVals });
 
         TFHE.allowThis(vote.rating);
         TFHE.allowThis(vote.metaVals[0]);
@@ -124,11 +120,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
             // connect predicate together with "AND" operator
             for (uint256 pIdx = 0; pIdx < predicates.length; pIdx += 1) {
-                accepted = TFHE.select(
-                    _checkPredicate(proposalVote, predicates[pIdx], inputProof),
-                    accepted,
-                    eFalse
-                );
+                accepted = TFHE.select(_checkPredicate(proposalVote, predicates[pIdx], inputProof), accepted, eFalse);
             }
 
             euint64 val = TFHE.select(accepted, proposalVote.rating, eZero);
@@ -141,49 +133,29 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         TFHE.allow(acc, msg.sender);
     }
 
-    function _checkPredicate(Vote storage vote, Predicate calldata predicate, bytes calldata inputProof) internal returns (ebool accepted) {
+    function _checkPredicate(
+        Vote storage vote,
+        Predicate calldata predicate,
+        bytes calldata inputProof
+    ) internal returns (ebool accepted) {
         ebool eTrue = TFHE.asEbool(true);
         ebool eFalse = TFHE.asEbool(false);
 
         euint64 checkVal = vote.metaVals[predicate.metaOpt];
         euint64 predicateVal = TFHE.asEuint64(predicate.handle, inputProof);
 
-        ebool isEQ = TFHE.select(
-            TFHE.asEbool(predicate.op == PredicateOp.EQ),
-            TFHE.eq(checkVal, predicateVal),
-            eFalse
-        );
+        ebool isEQ = TFHE.select(TFHE.asEbool(predicate.op == PredicateOp.EQ), TFHE.eq(checkVal, predicateVal), eFalse);
 
-        ebool isNE = TFHE.select(
-            TFHE.asEbool(predicate.op == PredicateOp.NE),
-            TFHE.ne(checkVal, predicateVal),
-            eFalse
-        );
+        ebool isNE = TFHE.select(TFHE.asEbool(predicate.op == PredicateOp.NE), TFHE.ne(checkVal, predicateVal), eFalse);
 
-        ebool isGT = TFHE.select(
-            TFHE.asEbool(predicate.op == PredicateOp.GT),
-            TFHE.gt(checkVal, predicateVal),
-            eFalse
-        );
+        ebool isGT = TFHE.select(TFHE.asEbool(predicate.op == PredicateOp.GT), TFHE.gt(checkVal, predicateVal), eFalse);
 
-        ebool isLT = TFHE.select(
-            TFHE.asEbool(predicate.op == PredicateOp.LT),
-            TFHE.lt(checkVal, predicateVal),
-            eFalse
-        );
+        ebool isLT = TFHE.select(TFHE.asEbool(predicate.op == PredicateOp.LT), TFHE.lt(checkVal, predicateVal), eFalse);
 
         accepted = TFHE.select(
             isEQ,
             eTrue,
-            TFHE.select(
-                isNE,
-                eTrue,
-                TFHE.select(
-                    isGT,
-                    eTrue,
-                    TFHE.select(isLT, eTrue, eFalse)
-                )
-            )
+            TFHE.select(isNE, eTrue, TFHE.select(isGT, eTrue, TFHE.select(isLT, eTrue, eFalse)))
         );
     }
 }

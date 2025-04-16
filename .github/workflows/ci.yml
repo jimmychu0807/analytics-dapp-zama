@@ -17,7 +17,7 @@ jobs:
       - name: "Install Pnpm"
         uses: "pnpm/action-setup@v2"
         with:
-          version: "8"
+          version: "10"
 
       - name: "Install Node.js"
         uses: "actions/setup-node@v3"
@@ -33,22 +33,15 @@ jobs:
           SEPOLIA_RPC_URL: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID"
 
       - name: "Lint the code"
-        run: "pnpm lint"
+        run: "cd packages/hardhat && pnpm lint"
 
       - name: "Add lint summary"
         run: |
           echo "## Lint results" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
-      - name: "Compile the contracts and generate the TypeChain bindings"
-        run: "pnpm typechain"
-        env:
-          MNEMONIC:
-            "exchange vintage ocean narrow danger return culture ignore trim solve clock hidden buddy wise emotion"
-          SEPOLIA_RPC_URL: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID"
-
-      - name: "Test the contracts and generate the coverage report"
-        run: "pnpm coverage"
+      - name: "Test the contracts"
+        run: "cd packages/hardhat && pnpm test:all"
         env:
           MNEMONIC:
             "exchange vintage ocean narrow danger return culture ignore trim solve clock hidden buddy wise emotion"

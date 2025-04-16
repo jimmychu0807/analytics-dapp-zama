@@ -4,8 +4,19 @@ pragma solidity ^0.8.24;
 import { einput, euint64 } from "fhevm/lib/TFHE.sol";
 
 interface IVoting {
-    enum AggregateOp { COUNT, SUM, MIN, MAX, AVG }
-    enum PredicateOp { EQ, NE, GT, LT }
+    enum AggregateOp {
+        COUNT,
+        SUM,
+        MIN,
+        MAX,
+        AVG
+    }
+    enum PredicateOp {
+        EQ,
+        NE,
+        GT,
+        LT
+    }
 
     struct Proposal {
         address admin;
