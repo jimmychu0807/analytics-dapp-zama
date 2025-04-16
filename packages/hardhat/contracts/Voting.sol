@@ -2,12 +2,11 @@
 pragma solidity ^0.8.24;
 
 import "fhevm/lib/TFHE.sol";
-import {SepoliaZamaFHEVMConfig} from "fhevm/config/ZamaFHEVMConfig.sol";
-import {SepoliaZamaGatewayConfig} from "fhevm/config/ZamaGatewayConfig.sol";
+import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
+import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
-import {LibString} from "solady/src/utils/LibString.sol";
-
-import {console} from "hardhat/console.sol";
+import { LibString } from "solady/src/utils/LibString.sol";
+// import { console } from "hardhat/console.sol";
 
 struct Proposal {
     address admin;
@@ -19,7 +18,7 @@ struct Proposal {
 }
 
 struct Predicate {
-    uint64 opt;
+    uint64 metaOpt;
     string op;
     einput handle;
 }
@@ -31,8 +30,6 @@ struct Vote {
 
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller {
     using LibString for string;
-    // -- enum --
-
 
     // --- constant ---
     uint16 public constant MAX_QUESTION_LEN = 512;
@@ -131,7 +128,7 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
     function query(
         uint64 proposalId,
         string calldata op,
-        Predicate calldata predicate,
+        Predicate[] calldata predicates,
         bytes calldata inputProof
     ) public {
         require(proposalId < nextProposalId, "Invalid ProposalId.");
@@ -143,14 +140,23 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         // This is where we store the result
         euint64 acc = TFHE.asEuint64(0);
         euint64 eZero = TFHE.asEuint64(0);
+        ebool eTrue = TFHE.asEbool(true);
+        ebool eFalse = TFHE.asEbool(false);
 
-        for (uint256 idx = 0; idx < oneProposalVotes.length; idx += 1) {
-            euint64 val = TFHE.select(
-                _checkPredicate(oneProposalVotes[idx], predicate, inputProof),
-                oneProposalVotes[idx].rating,
-                eZero
-            );
+        for (uint256 vIdx = 0; vIdx < oneProposalVotes.length; vIdx += 1) {
+            Vote storage proposalVote = oneProposalVotes[vIdx];
+            ebool accepted = eTrue;
 
+            // connect predicate together with "AND" operator
+            for (uint256 pIdx = 0; pIdx < predicates.length; pIdx += 1) {
+                accepted = TFHE.select(
+                    _checkPredicate(proposalVote, predicates[pIdx], inputProof),
+                    accepted,
+                    eFalse
+                );
+            }
+
+            euint64 val = TFHE.select(accepted, proposalVote.rating, eZero);
             acc = TFHE.add(acc, val);
         }
 
@@ -164,10 +170,8 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         ebool eTrue = TFHE.asEbool(true);
         ebool eFalse = TFHE.asEbool(false);
 
-        euint64 checkVal = vote.metaVals[predicate.opt];
+        euint64 checkVal = vote.metaVals[predicate.metaOpt];
         euint64 predicateVal = TFHE.asEuint64(predicate.handle, inputProof);
-        // console.log("checkVal:     %s", euint64.unwrap(checkVal));
-        // console.log("predicateVal: %s", euint64.unwrap(predicateVal));
 
         ebool isEQ = TFHE.select(
             TFHE.asEbool(predicate.op.eq('EQ')),
