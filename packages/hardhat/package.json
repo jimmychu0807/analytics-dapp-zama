@@ -12,7 +12,7 @@
   "scripts": {
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
     "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat compile",
-    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
     "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
@@ -44,6 +44,7 @@
     "@types/node": "^18.19.59",
     "@typescript-eslint/eslint-plugin": "^8.0.1",
     "@typescript-eslint/parser": "^8.0.1",
+    "bigint-buffer": "^1.1.5",
     "chai": "^4.3.7",
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.3",
