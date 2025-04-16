@@ -18,9 +18,10 @@ struct Proposal {
     uint64 thresholdToTally;
 }
 
-struct TallyResult {
-    uint32[] optCount;
-    bool counted;
+struct Predicate {
+    uint64 opt;
+    string op;
+    einput handle;
 }
 
 struct Vote {
@@ -129,20 +130,74 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
 
     function tallyUp(
         uint64 proposalId,
-        string calldata op
+        string calldata op,
+        Predicate calldata predicate,
+        bytes calldata inputProof
     ) public {
         require(proposalId < nextProposalId, "Invalid ProposalId.");
 
         Proposal storage proposal = proposals[proposalId];
         Vote[] storage oneProposalVotes = proposalVotes[proposalId];
-        uint256 voteLen = oneProposalVotes.length;
-        require(voteLen >= proposal.thresholdToTally, "Vote threshold not reached yet");
+        require(oneProposalVotes.length >= proposal.thresholdToTally, "Vote threshold not reached yet");
 
         euint64 acc = TFHE.asEuint64(0);
 
-        for (uint256 idx = 0; idx < voteLen; idx += 1) {
-            ebool isSUM =  TFHE.asEbool(op.eq('SUM'));
-            euint64 val = TFHE.select(isSUM, oneProposalVotes[idx].rating, TFHE.asEuint64(0));
+        ebool eTrue = TFHE.asEbool(true);
+        ebool eFalse = TFHE.asEbool(false);
+        euint64 eZero = TFHE.asEuint64(0);
+
+        euint64 predicateVal = TFHE.asEuint64(predicate.handle, inputProof);
+
+        for (uint256 idx = 0; idx < oneProposalVotes.length; idx += 1) {
+            euint64 checkVal = oneProposalVotes[idx].metaVals[predicate.opt];
+
+            // console.log("predicateVal: %s", euint64.unwrap(predicateVal));
+            // console.log("checkVal:     %s", euint64.unwrap(checkVal));
+
+            ebool isEQ = TFHE.select(
+                TFHE.asEbool(predicate.op.eq('EQ')),
+                TFHE.eq(checkVal, predicateVal),
+                eFalse
+            );
+
+            ebool isNE = TFHE.select(
+                TFHE.asEbool(predicate.op.eq('NE')),
+                TFHE.ne(checkVal, predicateVal),
+                eFalse
+            );
+
+            ebool isGT = TFHE.select(
+                TFHE.asEbool(op.eq('GT')),
+                TFHE.gt(checkVal, predicateVal),
+                eFalse
+            );
+
+            ebool isLT = TFHE.select(
+                TFHE.asEbool(op.eq('LT')),
+                TFHE.lt(checkVal, predicateVal),
+                eFalse
+            );
+
+            ebool accepted = TFHE.select(
+                isEQ,
+                eTrue,
+                TFHE.select(
+                    isNE,
+                    eTrue,
+                    TFHE.select(
+                        isGT,
+                        eTrue,
+                        TFHE.select(isLT, eTrue, eFalse)
+                    )
+                )
+            );
+
+            euint64 val = TFHE.select(
+                accepted,
+                oneProposalVotes[idx].rating,
+                eZero
+            );
+
             acc = TFHE.add(acc, val);
         }
 

@@ -19,7 +19,7 @@ describe("Voting", function() {
     const endTS = currentTS + 100 // in 30 sec
 
     await ctx.votingContract.connect(ctx.signers.alice).newProposal(
-      "How would you rate alice?",
+      "How would you rate Alice?",
       ["Gender", "Continet", "Age"],
       5,
       currentTS,
@@ -32,7 +32,7 @@ describe("Voting", function() {
     const voteData = [
       [ctx.signers.alice, 5, Gender.Male, Continent.Asia, 44],
       [ctx.signers.bob, 8, Gender.Male, Continent.Asia, 25],
-      [ctx.signers.carol, 2, Gender.Female, Continent.Europe, 30],
+      [ctx.signers.carol, 2, Gender.Male, Continent.Europe, 30],
       [ctx.signers.dave, 4, Gender.Female, Continent.Europe, 35],
       [ctx.signers.eve, 10, Gender.Female, Continent.Europe, 40],
     ];
@@ -78,7 +78,7 @@ describe("Voting", function() {
     const endTS = currentTS + 100 // in 30 sec
 
     let tx = this.votingContract.connect(this.signers.alice).newProposal(
-      "How would you rate alice?",
+      "How would you rate Alice?",
       ["Gender", "Continet", "Age"],
       5,
       currentTS,
@@ -103,7 +103,7 @@ describe("Voting", function() {
     const endTS = currentTS + 100 // end in 30 sec
 
     let tx = await this.votingContract.connect(this.signers.alice).newProposal(
-      "How would you rate alice?",
+      "How would you rate Alice?",
       ["Gender", "Continent", "Age"],
       5,
       currentTS,
@@ -145,8 +145,19 @@ describe("Voting", function() {
   it("able to tally up", async function() {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
 
-    await this.votingContract.connect(this.signers.alice).tallyUp(proposalId, 'SUM');
     const aliceAddr = await this.signers.alice.getAddress();
+    const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
+    const inputs = await input
+      .add64(Gender.Male)
+      .encrypt();
+
+    await this.votingContract.connect(this.signers.alice).tallyUp(
+      proposalId,
+      'SUM',
+      { opt: 0, op: 'EQ', handle: inputs.handles[0] },
+      inputs.inputProof
+    );
+
     const encryptedHandle = await this.votingContract.tallyResults(aliceAddr);
 
     // Read the value back with reencryption
@@ -157,7 +168,9 @@ describe("Voting", function() {
       this.contractAddress
     )
 
-    const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
+    const sum = voteData
+      .filter((oneVote) => oneVote[2] === Gender.Male)
+      .reduce((acc, oneVote) => acc + oneVote[1], 0);
     expect(tallyResult).to.equal(sum);
   });
 });
