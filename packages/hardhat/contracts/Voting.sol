@@ -144,6 +144,10 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         QueryRequest storage req = queryRequests[reqId];
         Vote[] storage oneProposalVotes = proposalVotes[req.proposalId];
 
+        if (req.state == RequestState.Completed) {
+            revert("query has executed completely");
+        }
+
         uint64 actualSteps = steps;
         uint64 stepsToEnd = uint64(oneProposalVotes.length) - req.accSteps;
         if (stepsToEnd < steps) actualSteps = stepsToEnd;
