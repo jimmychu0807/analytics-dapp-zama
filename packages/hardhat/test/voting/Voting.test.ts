@@ -5,6 +5,7 @@ import { initGateway } from "../asyncDecrypt";
 import { createInstance } from "../instance";
 import { reencryptEuint64 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
+import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { AggregateOp, Continent, Gender, PredicateOp } from "./types";
 
 describe("Voting", function () {
@@ -15,13 +16,21 @@ describe("Voting", function () {
     await initGateway();
   });
 
+  function printGasConsumed(receipt) {
+    if (hre.network.name === "hardhat") {
+      const gasConsumed = getFHEGasFromTxReceipt(receipt);
+      console.log("FHEGas consumed:", gasConsumed);
+    }
+    console.log("Native gas consumed:", receipt.gasUsed);
+  }
+
   async function loadProposalFixture(ctx: Mocha.Context) {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000;
 
     await ctx.votingContract
       .connect(ctx.signers.alice)
-      .newProposal("How would you rate Alice?", ["Gender", "Continet", "Age"], 5, currentTS, endTS);
+      .newProposal("How would you rate Alice?", ["Gender", "Continet", "Age"], 3, currentTS, endTS);
   }
 
   async function loadProposalAndVotesFixture(ctx: Mocha.Context) {
@@ -29,11 +38,12 @@ describe("Voting", function () {
 
     const proposalId = 0;
     const voteData = [
-      [ctx.signers.alice, 5, Gender.Male, Continent.Asia, 44],
+      [ctx.signers.alice, 5, Gender.Female, Continent.Asia, 44],
       [ctx.signers.bob, 8, Gender.Male, Continent.Asia, 25],
-      [ctx.signers.carol, 2, Gender.Male, Continent.Europe, 30],
-      [ctx.signers.dave, 4, Gender.Female, Continent.Europe, 35],
+      [ctx.signers.carol, 2, Gender.Female, Continent.Europe, 30],
+      [ctx.signers.dave, 4, Gender.Male, Continent.Europe, 35],
       [ctx.signers.eve, 10, Gender.Female, Continent.Europe, 40],
+      [ctx.signers.fred, 9, Gender.Male, Continent.Africa, 30],
     ];
     const instance = await createInstance();
 
@@ -116,7 +126,8 @@ describe("Voting", function () {
         inputs.inputProof,
       );
 
-    await tx.wait();
+    printGasConsumed(await tx.wait());
+
     // assert the signer has voted
     const hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
     expect(hasVoted).to.equal(true);
@@ -129,7 +140,8 @@ describe("Voting", function () {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
 
     const aliceAddr = await this.signers.alice.getAddress();
-    await this.votingContract.connect(this.signers.alice).query(proposalId, AggregateOp.SUM, [], "0x");
+    const tx = await this.votingContract.connect(this.signers.alice).query(proposalId, AggregateOp.SUM, [], "0x");
+    printGasConsumed(await tx.wait());
 
     const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
 
@@ -148,7 +160,7 @@ describe("Voting", function () {
     const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
     const inputs = await input.add64(Gender.Male).encrypt();
 
-    await this.votingContract
+    const tx = await this.votingContract
       .connect(this.signers.alice)
       .query(
         proposalId,
@@ -156,6 +168,7 @@ describe("Voting", function () {
         [{ metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] }],
         inputs.inputProof,
       );
+    printGasConsumed(await tx.wait());
 
     const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
 
@@ -175,7 +188,7 @@ describe("Voting", function () {
     const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
     const inputs = await input.add64(Gender.Male).add64(29).encrypt();
 
-    await this.votingContract.connect(this.signers.alice).query(
+    const tx = await this.votingContract.connect(this.signers.alice).query(
       proposalId,
       AggregateOp.SUM,
       [
@@ -184,6 +197,7 @@ describe("Voting", function () {
       ],
       inputs.inputProof,
     );
+    printGasConsumed(await tx.wait());
 
     const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
 

@@ -11,11 +11,17 @@ interface IVoting {
         MAX,
         AVG
     }
+
     enum PredicateOp {
         EQ,
         NE,
         GT,
         LT
+    }
+
+    enum RequestState {
+        Initialized,
+        Completed
     }
 
     struct Proposal {
@@ -24,7 +30,18 @@ interface IVoting {
         string[] metaOpts;
         uint256 startTime;
         uint256 endTime;
-        uint64 thresholdToTally;
+        uint64 queryThreshold;
+    }
+
+    struct QueryRequest {
+        uint64 proposalId;
+        address owner;
+        AggregateOp aggOp;
+        Predicate[] predicates;
+        bytes inputProof;
+        euint64 acc;
+        uint64 accSteps;
+        RequestState state;
     }
 
     struct Predicate {
@@ -41,4 +58,8 @@ interface IVoting {
     // All the events
     event ProposalCreated(address indexed sender, uint64 indexed proposalId, uint256 startTime, uint256 endTime);
     event VoteCasted(address indexed sender, uint64 indexed proposalId);
+    event QueryRequestCreated(uint64 reqId, address owner);
+    event QueryRequestDeleted(uint64 reqId);
+    event QueryExecutionCompleted(uint64 reqId);
+    event QueryExecutionRunning(uint64 reqId, uint64 accSteps, uint64 ttl);
 }
