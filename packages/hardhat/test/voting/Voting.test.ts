@@ -1,7 +1,9 @@
 import { expect } from "chai";
+import { Contract, Log, TransactionReceipt } from "ethers";
 import hre from "hardhat";
 
 import { initGateway } from "../asyncDecrypt";
+import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { createInstance } from "../instance";
 import { reencryptEuint64 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
@@ -11,9 +13,21 @@ describe("Voting", function () {
   before(async function () {
     await initSigners();
     this.signers = await getSigners();
-
     await initGateway();
   });
+
+  function printGasConsumed(receipt: TransactionReceipt, prefix: string) {
+    const gasConsumed = getFHEGasFromTxReceipt(receipt);
+    console.log(`${prefix}: (Native gas, FHE gas) consumed: (${receipt.gasUsed}, ${gasConsumed})`);
+  }
+
+  function getEventArgs(contract: Contract, eventLogs: Log[], eventName: string) {
+    const targetLogs = eventLogs
+      .map((log) => contract.interface.parseLog(log))
+      .filter((log) => log && log.name === eventName);
+
+    return targetLogs.length > 0 ? targetLogs[0]!.args : undefined;
+  }
 
   async function loadProposalFixture(ctx: Mocha.Context) {
     const currentTS = Math.floor(Date.now() / 1000);
@@ -21,23 +35,28 @@ describe("Voting", function () {
 
     await ctx.votingContract
       .connect(ctx.signers.alice)
-      .newProposal("How would you rate Alice?", ["Gender", "Continet", "Age"], 5, currentTS, endTS);
+      .newProposal("How would you rate Alice?", ["Gender", "Continet", "Age"], 3, currentTS, endTS);
   }
 
-  async function loadProposalAndVotesFixture(ctx: Mocha.Context) {
+  async function loadProposalAndVotesFixture(ctx: Mocha.Context, numEntries?: number) {
     await loadProposalFixture(ctx);
 
     const proposalId = 0;
     const voteData = [
-      [ctx.signers.alice, 5, Gender.Male, Continent.Asia, 44],
+      [ctx.signers.alice, 5, Gender.Female, Continent.Asia, 44],
       [ctx.signers.bob, 8, Gender.Male, Continent.Asia, 25],
-      [ctx.signers.carol, 2, Gender.Male, Continent.Europe, 30],
-      [ctx.signers.dave, 4, Gender.Female, Continent.Europe, 35],
+      [ctx.signers.carol, 2, Gender.Female, Continent.Europe, 30],
+      [ctx.signers.dave, 4, Gender.Male, Continent.Europe, 35],
       [ctx.signers.eve, 10, Gender.Female, Continent.Europe, 40],
+      [ctx.signers.fred, 9, Gender.Male, Continent.Africa, 30],
     ];
     const instance = await createInstance();
 
-    for (const oneVoteData of voteData) {
+    numEntries = numEntries ?? voteData.length;
+
+    for (let idx = 0; idx < numEntries; idx++) {
+      const oneVoteData = voteData[idx];
+
       const signer = oneVoteData[0];
       const signerAddr = await signer.getAddress();
       const input = instance.createEncryptedInput(ctx.contractAddress, signerAddr);
@@ -116,7 +135,8 @@ describe("Voting", function () {
         inputs.inputProof,
       );
 
-    await tx.wait();
+    printGasConsumed(await tx.wait(), "castVote");
+
     // assert the signer has voted
     const hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
     expect(hasVoted).to.equal(true);
@@ -125,57 +145,79 @@ describe("Voting", function () {
     expect(votesLen).to.equal(1);
   });
 
-  it("able to query with no predicate", async function () {
+  it("able to query with no predicate in one round with SUM", async function () {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
 
-    const aliceAddr = await this.signers.alice.getAddress();
-    await this.votingContract.connect(this.signers.alice).query(proposalId, AggregateOp.SUM, [], "0x");
+    // prettier-ignore
+    let tx = await this.votingContract
+      .connect(this.signers.alice)
+      .requestQuery(proposalId, AggregateOp.SUM, [], "0x");
+    let receipt = await tx.wait();
 
-    const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
+    const [reqId] = getEventArgs(this.votingContract, receipt.logs, "QueryRequestCreated")!;
 
-    // Read the value back with reencryption
+    // Perform one round of query
+    tx = await this.votingContract.executeQuery(reqId, voteData.length);
+    receipt = await tx.wait();
+    printGasConsumed(receipt, "executeQuery");
+
+    const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
+    expect(eventArgs).to.deep.equal([reqId]);
+
+    const encryptedHandle = await this.votingContract.getQueryResult(reqId);
     const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
 
     const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
     expect(queryResult).to.equal(sum);
   });
 
-  it("able to query with one predicate", async function () {
+  it("able to query with one predicate in two rounds with SUM", async function () {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
-
     const aliceAddr = await this.signers.alice.getAddress();
-
     const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
     const inputs = await input.add64(Gender.Male).encrypt();
 
-    await this.votingContract
+    let tx = await this.votingContract
       .connect(this.signers.alice)
-      .query(
+      .requestQuery(
         proposalId,
         AggregateOp.SUM,
         [{ metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] }],
         inputs.inputProof,
       );
 
-    const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
+    const reqId = BigInt(0);
+    const steps = Math.ceil(voteData.length / 2);
+
+    // Perform the 1st round of query
+    tx = await this.votingContract.executeQuery(reqId, steps);
+    let receipt = await tx.wait();
+    printGasConsumed(receipt, "1st executeQuery");
+
+    let eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionRunning");
+    expect(eventArgs).to.deep.equal([reqId, steps, voteData.length]);
+
+    // Perform the 2nd around of query
+    tx = await this.votingContract.executeQuery(reqId, steps);
+    receipt = await tx.wait();
+    printGasConsumed(receipt, "2nd executeQuery");
+
+    eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
+    expect(eventArgs).to.deep.equal([reqId]);
 
     // Read the value back with reencryption
+    const encryptedHandle = await this.votingContract.getQueryResult(reqId);
     const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
-
     const sum = voteData.filter((v) => v[2] === Gender.Male).reduce((acc, oneVote) => acc + oneVote[1], 0);
-
     expect(queryResult).to.equal(sum);
   });
 
-  it("able to query with two predicates", async function () {
+  it("able to query with two predicates in two rounds with SUM", async function () {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
-
     const aliceAddr = await this.signers.alice.getAddress();
-
     const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
     const inputs = await input.add64(Gender.Male).add64(29).encrypt();
-
-    await this.votingContract.connect(this.signers.alice).query(
+    let tx = await this.votingContract.connect(this.signers.alice).requestQuery(
       proposalId,
       AggregateOp.SUM,
       [
@@ -185,13 +227,29 @@ describe("Voting", function () {
       inputs.inputProof,
     );
 
-    const encryptedHandle = await this.votingContract.queryResults(aliceAddr);
+    const reqId = BigInt(0);
+    const steps = Math.ceil(voteData.length / 2);
+
+    // Perform the 1st round of query
+    tx = await this.votingContract.executeQuery(reqId, steps);
+    let receipt = await tx.wait();
+    printGasConsumed(receipt, "1st executeQuery");
+
+    let eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionRunning");
+    expect(eventArgs).to.deep.equal([reqId, steps, voteData.length]);
+
+    // Perform the 2nd around of query
+    tx = await this.votingContract.executeQuery(reqId, steps);
+    receipt = await tx.wait();
+    printGasConsumed(receipt, "2nd executeQuery");
+
+    eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
+    expect(eventArgs).to.deep.equal([reqId]);
 
     // Read the value back with reencryption
+    const encryptedHandle = await this.votingContract.getQueryResult(reqId);
     const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
-
     const sum = voteData.filter((v) => v[2] === Gender.Male && v[4] > 29).reduce((acc, oneVote) => acc + oneVote[1], 0);
-
     expect(queryResult).to.equal(sum);
   });
 });
