@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { Contract, TransactionReceipt, Log } from "ethers";
+import { Contract, Log, TransactionReceipt } from "ethers";
 import hre from "hardhat";
 
 import { initGateway } from "../asyncDecrypt";
+import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { createInstance } from "../instance";
 import { reencryptEuint64 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
-import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { AggregateOp, Continent, Gender, PredicateOp } from "./types";
 
 describe("Voting", function () {
@@ -24,7 +24,7 @@ describe("Voting", function () {
   function getEventArgs(contract: Contract, eventLogs: Log[], eventName: string) {
     const targetLogs = eventLogs
       .map((log) => contract.interface.parseLog(log))
-      .filter(log => log && log.name === eventName);
+      .filter((log) => log && log.name === eventName);
 
     return targetLogs.length > 0 ? targetLogs[0]!.args : undefined;
   }
@@ -148,19 +148,20 @@ describe("Voting", function () {
   it("able to query with no predicate in one round with SUM", async function () {
     const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
 
+    // prettier-ignore
     let tx = await this.votingContract
       .connect(this.signers.alice)
       .requestQuery(proposalId, AggregateOp.SUM, [], "0x");
     let receipt = await tx.wait();
 
-    const [reqId] = getEventArgs(this.votingContract, receipt.logs, 'QueryRequestCreated')!;
+    const [reqId] = getEventArgs(this.votingContract, receipt.logs, "QueryRequestCreated")!;
 
     // Perform one round of query
     tx = await this.votingContract.executeQuery(reqId, voteData.length);
     receipt = await tx.wait();
     printGasConsumed(receipt, "executeQuery");
 
-    const eventArgs = getEventArgs(this.votingContract, receipt.logs, 'QueryExecutionCompleted');
+    const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
     expect(eventArgs).to.deep.equal([reqId]);
 
     const encryptedHandle = await this.votingContract.getQueryResult(reqId);
@@ -193,7 +194,7 @@ describe("Voting", function () {
     let receipt = await tx.wait();
     printGasConsumed(receipt, "1st executeQuery");
 
-    let eventArgs = getEventArgs(this.votingContract, receipt.logs, 'QueryExecutionRunning');
+    let eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionRunning");
     expect(eventArgs).to.deep.equal([reqId, steps, voteData.length]);
 
     // Perform the 2nd around of query
@@ -201,7 +202,7 @@ describe("Voting", function () {
     receipt = await tx.wait();
     printGasConsumed(receipt, "2nd executeQuery");
 
-    eventArgs = getEventArgs(this.votingContract, receipt.logs, 'QueryExecutionCompleted');
+    eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
     expect(eventArgs).to.deep.equal([reqId]);
 
     // Read the value back with reencryption
@@ -216,14 +217,14 @@ describe("Voting", function () {
     const aliceAddr = await this.signers.alice.getAddress();
     const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
     const inputs = await input.add64(Gender.Male).add64(29).encrypt();
-    let tx = await this.votingContract
-      .connect(this.signers.alice)
-      .requestQuery(
-        proposalId,
-        AggregateOp.SUM,
-        [ { metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] },
-          { metaOpt: 2, op: PredicateOp.GT, handle: inputs.handles[1] } ],
-        inputs.inputProof,
+    let tx = await this.votingContract.connect(this.signers.alice).requestQuery(
+      proposalId,
+      AggregateOp.SUM,
+      [
+        { metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] },
+        { metaOpt: 2, op: PredicateOp.GT, handle: inputs.handles[1] },
+      ],
+      inputs.inputProof,
     );
 
     const reqId = BigInt(0);
@@ -234,7 +235,7 @@ describe("Voting", function () {
     let receipt = await tx.wait();
     printGasConsumed(receipt, "1st executeQuery");
 
-    let eventArgs = getEventArgs(this.votingContract, receipt.logs, 'QueryExecutionRunning');
+    let eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionRunning");
     expect(eventArgs).to.deep.equal([reqId, steps, voteData.length]);
 
     // Perform the 2nd around of query
@@ -242,7 +243,7 @@ describe("Voting", function () {
     receipt = await tx.wait();
     printGasConsumed(receipt, "2nd executeQuery");
 
-    eventArgs = getEventArgs(this.votingContract, receipt.logs, 'QueryExecutionCompleted');
+    eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
     expect(eventArgs).to.deep.equal([reqId]);
 
     // Read the value back with reencryption

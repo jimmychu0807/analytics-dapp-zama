@@ -6,7 +6,7 @@ import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
 import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IVoting } from "./interfaces/IVoting.sol";
-import { console } from "hardhat/console.sol";
+// import { console } from "hardhat/console.sol";
 
 contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IVoting {
     // --- constant ---
@@ -132,15 +132,12 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
     function deleteQuery(uint64 reqId) public {
         // Can only be deleted by the owner
         QueryRequest storage req = queryRequests[reqId];
-        require (req.owner == msg.sender, "Not the owner of the query request");
+        require(req.owner == msg.sender, "Not the owner of the query request");
         delete queryRequests[reqId];
         emit QueryRequestDeleted(reqId);
     }
 
-    function executeQuery(
-        uint64 reqId,
-        uint64 steps
-    ) public {
+    function executeQuery(uint64 reqId, uint64 steps) public {
         QueryRequest storage req = queryRequests[reqId];
         Vote[] storage oneProposalVotes = proposalVotes[req.proposalId];
 
@@ -194,8 +191,8 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
     function getQueryResult(uint64 reqId) public view returns (euint64) {
         // require the query request state to be completed
         QueryRequest storage req = queryRequests[reqId];
-        require (req.owner == msg.sender, "Not the owner of the query request");
-        require (req.state == RequestState.Completed, "request not execute to completion yet");
+        require(req.owner == msg.sender, "Not the owner of the query request");
+        require(req.state == RequestState.Completed, "request not execute to completion yet");
         return req.acc;
     }
 
