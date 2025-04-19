@@ -39,17 +39,22 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         string calldata _question,
         string[] calldata _metaOpts,
         uint64 _queryThreshold,
+        uint64 _maxVal,
+        uint64 _minVal,
         uint256 _startTime,
-        uint256 _endTime
+        uint256 _endTime,
     ) public returns (Proposal memory proposal) {
         require(bytes(_question).length <= MAX_QUESTION_LEN, "Question exceed 512 bytes");
         require(_metaOpts.length <= MAX_OPTIONS, "Options exceed 32 options");
         require(_startTime < _endTime, "Start time is gte to end time");
+        require(_minVal < _maxVal, "Min value of the question is not smaller than the max value");
 
         proposal = Proposal({
             admin: msg.sender,
             question: _question,
             metaOpts: _metaOpts,
+            maxVal: _maxVal,
+            minVal: _minVal,
             startTime: _startTime,
             endTime: _endTime,
             queryThreshold: _queryThreshold
@@ -168,7 +173,12 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
                 );
             }
 
-            euint64 val = TFHE.select(accepted, oneVote.rating, eZero);
+            euint64 val = TFHE.select(
+                accepted,
+                oneVote.rating,
+                // The nullifer for MIN operator is the max value of the data type
+                TFHE.select(TFHE.asEbool(req.aggOp == AggregateOp.MIN), TFHE.asEuint64(type(uint64).max), eZero)
+            );
 
             // note: 0 won't work for min as a nullifier
             acc = _aggregateVote(acc, req.aggOp, val);
@@ -195,6 +205,8 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         require(req.state == RequestState.Completed, "request not execute to completion yet");
         return req.acc;
     }
+
+    // --- Internal Helper methods ---
 
     function _checkPredicate(
         Vote storage vote,
@@ -236,21 +248,22 @@ contract Voting is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCall
         euint64 eZero = TFHE.asEuint64(0);
         euint64 eOne = TFHE.asEuint64(1);
 
-        retVal = TFHE.add(acc, val);
-
+        // TODO:
+        //   1. work on AggregateOp.AVG
+        //   2. min doesn't work with nullifier of 0
         // prettier-ignore
-        // retVal = TFHE.select(
-        //     TFHE.asEbool(aggOp == AggregateOp.COUNT),
-        //     TFHE.add(acc, TFHE.select(TFHE.eq(val, eZero), eZero, eOne)),
-        //     TFHE.select(
-        //         TFHE.asEbool(aggOp == AggregateOp.SUM),
-        //         TFHE.add(acc, val),
-        //         TFHE.select(
-        //             TFHE.asEbool(aggOp == AggregateOp.MIN),
-        //             TFHE.min(acc, val),
-        //             TFHE.max(acc, val)
-        //         )
-        //     )
-        // );
+        retVal = TFHE.select(
+            TFHE.asEbool(aggOp == AggregateOp.COUNT),
+            TFHE.add(acc, TFHE.select(TFHE.ne(val, eZero), eOne, eZero)),
+            TFHE.select(
+                TFHE.asEbool(aggOp == AggregateOp.SUM),
+                TFHE.add(acc, val),
+                TFHE.select(
+                    TFHE.asEbool(aggOp == AggregateOp.MIN),
+                    TFHE.min(acc, val),
+                    TFHE.max(acc, val)
+                )
+            )
+        );
     }
 }

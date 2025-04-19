@@ -1,6 +1,6 @@
 {
-  "name": "@jimmychu0807/voting-app",
-  "description": "Voting app built on Zama",
+  "name": "@jimmychu0807/analytics-dapp-zama",
+  "description": "Analytics dapp built on Zama",
   "version": "1.0.0",
   "engines": {
     "node": ">=20.0.0"
