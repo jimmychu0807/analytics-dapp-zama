@@ -128,9 +128,6 @@ describe("Analytic", function () {
     const signer = this.signers.bob;
     const signerAddr = await signer.getAddress();
 
-    const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add64(0).add16(2).add16(41).encrypt();
-
     // Setup event listener before sending tx
     const eventPromise = new Promise((resolve) => {
       this.analyticContract.once("ConfirmAnswer", (qId: bigint, sender: string) => {
@@ -138,6 +135,8 @@ describe("Analytic", function () {
       });
     });
 
+    const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
+    const inputs = await input.add64(0).add16(2).add16(41).encrypt();
     const tx = await this.analyticContract
       .connect(this.signers.bob)
       .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
@@ -158,6 +157,33 @@ describe("Analytic", function () {
 
     const ansLen = await this.analyticContract.getAnsLen(qId);
     expect(ansLen).to.equal(1);
+  });
+
+  it("should not accept invalid answer", async function () {
+    await loadCountQuestionFixture(this);
+
+    // Bob votes
+    const qId = 0;
+    const signer = this.signers.bob;
+    const signerAddr = await signer.getAddress();
+
+    const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
+    const inputs = await input.add64(0).add16(4).add16(41).encrypt();
+    const tx = await this.analyticContract
+      .connect(this.signers.bob)
+      .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
+
+    printGasConsumed(await tx.wait(), "answer");
+    await awaitAllDecryptionResults();
+
+    // TODO: how to check an error is thrown on awaitAllDecryptionResults()?
+
+    // check the storage, no new answer should have added
+    const hasAnswered = await this.analyticContract.hasAnswered(qId, signerAddr);
+    expect(hasAnswered).to.equal(false);
+
+    const ansLen = await this.analyticContract.getAnsLen(qId);
+    expect(ansLen).to.equal(0);
   });
 
   // it("able to query with no predicate in one round with SUM", async function () {
