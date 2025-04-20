@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import { einput, euint16, euint64 } from "fhevm/lib/TFHE.sol";
+import { euint16, euint64 } from "fhevm/lib/TFHE.sol";
 
 interface IAnalytic {
     enum AggregateOp {
