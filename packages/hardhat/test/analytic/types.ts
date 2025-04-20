@@ -15,10 +15,7 @@ export enum Continent {
 
 export enum AggregateOp {
   COUNT,
-  SUM,
-  MIN,
-  MAX,
-  AVG,
+  STATS,
 }
 
 export enum PredicateOp {

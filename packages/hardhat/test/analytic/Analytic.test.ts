@@ -1,14 +1,13 @@
 import { expect } from "chai";
-// import { Contract, Log, TransactionReceipt } from "ethers";
+import { TransactionReceipt } from "ethers";
 import hre from "hardhat";
 
-import { initGateway } from "../asyncDecrypt";
-// import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
+import { awaitAllDecryptionResults, initGateway } from "../asyncDecrypt";
+import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { createInstance } from "../instance";
 // import { reencryptEuint64 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
-
-// import { AggregateOp, Continent, Gender, PredicateOp } from "./types";
+import { AggregateOp } from "./types";
 
 describe("Analytic", function () {
   before(async function () {
@@ -17,10 +16,10 @@ describe("Analytic", function () {
     await initGateway();
   });
 
-  // function printGasConsumed(receipt: TransactionReceipt, prefix: string) {
-  //   const gasConsumed = getFHEGasFromTxReceipt(receipt);
-  //   console.log(`${prefix}: Native & FHE gas consumed: (${receipt.gasUsed}, ${gasConsumed})`);
-  // }
+  function printGasConsumed(receipt: TransactionReceipt, prefix: string) {
+    const gasConsumed = getFHEGasFromTxReceipt(receipt);
+    console.log(`${prefix}: Native & FHE gas consumed: (${receipt.gasUsed}, ${gasConsumed})`);
+  }
 
   // function getEventArgs(contract: Contract, eventLogs: Log[], eventName: string) {
   //   const targetLogs = eventLogs
@@ -30,14 +29,18 @@ describe("Analytic", function () {
   //   return targetLogs.length > 0 ? targetLogs[0]!.args : undefined;
   // }
 
-  // async function loadProposalFixture(ctx: Mocha.Context) {
-  //   const currentTS = Math.floor(Date.now() / 1000);
-  //   const endTS = currentTS + 1000;
+  async function loadCountQuestionFixture(ctx: Mocha.Context) {
+    const currentTS = Math.floor(Date.now() / 1000);
+    const endTS = currentTS + 1000; // in 1000 secs
 
-  //   await ctx.votingContract
-  //     .connect(ctx.signers.alice)
-  //     .newProposal("How would you rate Alice?", ["Gender", "Continet", "Age"], 3, currentTS, endTS);
-  // }
+    const metaOpts = [
+      { text: "Your current asset worth", min: 0, max: 3 },
+      { text: "Your age", min: 18, max: 150 },
+    ];
+    await ctx.analyticContract
+      .connect(ctx.signers.alice)
+      .newQuestion("Which L2 chains do you use most?", metaOpts, AggregateOp.COUNT, 0, 4, currentTS, endTS, 3);
+  }
 
   // async function loadProposalAndVotesFixture(ctx: Mocha.Context, numEntries?: number) {
   //   await loadProposalFixture(ctx);
@@ -104,7 +107,7 @@ describe("Analytic", function () {
     ];
     const tx = this.analyticContract
       .connect(this.signers.alice)
-      .newQuestion("Which L2 chains do you use most?", metaOpts, 0, 4, currentTS, endTS, 3);
+      .newQuestion("Which L2 chains do you use most?", metaOpts, AggregateOp.COUNT, 0, 4, currentTS, endTS, 3);
 
     await expect(tx).emit(this.analyticContract, "QuestionCreated").withArgs(this.signers.alice, 0, currentTS, endTS);
 
@@ -117,38 +120,45 @@ describe("Analytic", function () {
     expect(nextQuestionId).to.equal(1);
   });
 
-  // it("should accept a vote", async function () {
-  //   await loadProposalFixture(this);
+  it("should accept a valid answer", async function () {
+    await loadCountQuestionFixture(this);
 
-  //   // Bob votes
-  //   const proposalId = 0;
-  //   const instance = await createInstance();
-  //   const signer = this.signers.bob;
-  //   const signerAddr = await signer.getAddress();
+    // Bob votes
+    const qId = 0;
+    const signer = this.signers.bob;
+    const signerAddr = await signer.getAddress();
 
-  //   const input = instance.createEncryptedInput(this.contractAddress, signerAddr);
-  //   const inputs = await input.add64(5).add64(Gender.Male).add64(Continent.Asia).add64(44).encrypt();
+    const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
+    const inputs = await input.add64(0).add16(2).add16(41).encrypt();
 
-  //   const tx = await this.votingContract
-  //     .connect(this.signers.bob)
-  //     .castVote(
-  //       proposalId,
-  //       inputs.handles[0],
-  //       inputs.handles[1],
-  //       inputs.handles[2],
-  //       inputs.handles[3],
-  //       inputs.inputProof,
-  //     );
+    // Setup event listener before sending tx
+    const eventPromise = new Promise((resolve) => {
+      this.analyticContract.once("ConfirmAnswer", (qId: bigint, sender: string) => {
+        resolve({ qId, sender });
+      });
+    });
 
-  //   printGasConsumed(await tx.wait(), "castVote");
+    const tx = await this.analyticContract
+      .connect(this.signers.bob)
+      .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
 
-  //   // assert the signer has voted
-  //   const hasVoted = await this.votingContract.hasVoted(proposalId, signerAddr);
-  //   expect(hasVoted).to.equal(true);
+    printGasConsumed(await tx.wait(), "answer");
+    await awaitAllDecryptionResults();
 
-  //   const votesLen = await this.votingContract.getVotesLen(proposalId);
-  //   expect(votesLen).to.equal(1);
-  // });
+    // check the specific event is emitted
+    const eventArgs = await Promise.race([
+      eventPromise,
+      new Promise((_, reject) => setTimeout(() => reject("event not detected"), 3000)),
+    ]);
+    expect(eventArgs).to.deep.equal({ qId, sender: signerAddr });
+
+    // check the storage
+    const hasAnswered = await this.analyticContract.hasAnswered(qId, signerAddr);
+    expect(hasAnswered).to.equal(true);
+
+    const ansLen = await this.analyticContract.getAnsLen(qId);
+    expect(ansLen).to.equal(1);
+  });
 
   // it("able to query with no predicate in one round with SUM", async function () {
   //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);

@@ -38,6 +38,7 @@ interface IAnalytic {
         uint64 ansMin;
         uint64 ansMax;
         MetaOpt[] metaOpts;
+        AggregateOp op;
         uint256 startTime;
         uint256 endTime;
         QuestionState state;
@@ -47,7 +48,6 @@ interface IAnalytic {
     struct QueryRequest {
         uint64 reqId;
         address owner;
-        AggregateOp aggOp;
         Predicate[] predicates;
         bytes inputProof;
         euint64 acc;

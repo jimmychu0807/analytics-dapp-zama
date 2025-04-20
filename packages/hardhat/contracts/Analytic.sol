@@ -25,16 +25,16 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     mapping(uint64 => QueryRequest) public queryRequests;
 
     // --- viewer ---
-    function getQuestion(uint64 qId) public view returns (Question memory question) {
+    function getQuestion(uint64 qId) public view returns (Question memory) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
-        question = questions[qId];
+        return questions[qId];
     }
 
-    // function getVotesLen(uint64 proposalId) public view returns (uint256 voteLen) {
-    //     require(proposalId < nextProposalId, "Invalid proposalId");
-    //     Vote[] memory oneProposalVotes = proposalVotes[proposalId];
-    //     voteLen = oneProposalVotes.length;
-    // }
+    function getAnsLen(uint64 qId) public view returns (uint256) {
+        if (qId >= nextQuestionId) revert InvalidQuestion(qId);
+        Answer[] memory answers = questionAnswers[qId];
+        return answers.length;
+    }
 
     // --- modifier ---
     modifier questionValidAndOpen(uint64 qId) {
@@ -51,6 +51,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     function newQuestion(
         string calldata _qText,
         MetaOpt[] calldata _metaOpts,
+        AggregateOp _op,
         uint64 _ansMin,
         uint64 _ansMax,
         uint256 _startTime,
@@ -74,6 +75,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             qText: _qText,
             ansMin: _ansMin,
             ansMax: _ansMax,
+            op: _op,
             metaOpts: _metaOpts,
             startTime: _startTime,
             endTime: _endTime,
@@ -140,7 +142,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
-    function confirmOrRejectAnswer(uint256 reqId, bool decValid) public onlyGateway {
+    function confirmOrRejectAnswer(uint256 reqId, bool decValid) external onlyGateway {
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
 
