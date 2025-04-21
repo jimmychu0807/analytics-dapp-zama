@@ -185,8 +185,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     function requestQuery(
         uint64 qId,
-        PredicateInput[] calldata predicateInputs,
-        bytes calldata inputProof
+        Predicate[] calldata predicates
     ) public isQuestionAdmin(qId, msg.sender) aboveQueryThreshold(qId) returns (uint64 reqId) {
         reqId = nextQueryRequestId;
         Question storage question = questions[qId];
@@ -195,15 +194,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         euint32[] memory acc = new euint32[](question.ansMax + 1);
         for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
             acc[i] = eZero;
-        }
-
-        Predicate[] memory predicates = new Predicate[](predicateInputs.length);
-        for (uint256 pIdx = 0; pIdx < predicateInputs.length; pIdx++) {
-            predicates[pIdx] = Predicate({
-                metaOpt: TFHE.asEuint8(predicateInputs[pIdx].metaOpt, inputProof),
-                op: predicateInputs[pIdx].op,
-                metaVal: TFHE.asEuint16(predicateInputs[pIdx].metaVal, inputProof)
-            });
         }
 
         // create the queryRequest
@@ -271,15 +261,14 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         // --- Writing back to the storage
         req.accSteps += actualSteps;
+        // granting read access to the req owner of the result
+        for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
+            TFHE.allowThis(req.acc[ai]);
+            TFHE.allow(req.acc[ai], req.owner);
+        }
+
         if (req.accSteps == answers.length) {
             req.state = RequestState.Completed;
-
-            // granting read access to the req owner of the result
-            for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
-                TFHE.allowThis(req.acc[ai]);
-                TFHE.allow(req.acc[ai], req.owner);
-            }
-
             emit QueryExecutionCompleted(reqId);
         } else {
             emit QueryExecutionRunning(reqId, req.accSteps, uint64(answers.length));
@@ -294,10 +283,16 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         return req.acc;
     }
 
-    // // --- Internal Helper methods ---
+    // --- Internal Helper methods ---
 
-    function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool accepted) {
-        accepted = TFHE.asEbool(true);
+    function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool) {
+        if (predicate.op == PredicateOp.EQ) return TFHE.eq(ans.metaVals[predicate.metaOpt], predicate.metaVal);
+
+        if (predicate.op == PredicateOp.NE) return TFHE.ne(ans.metaVals[predicate.metaOpt], predicate.metaVal);
+
+        if (predicate.op == PredicateOp.GT) return TFHE.gt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
+
+        return TFHE.lt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
     }
 
     // function _aggregateVote(euint64 acc, AggregateOp aggOp, euint64 val) internal returns (euint64 retVal) {
