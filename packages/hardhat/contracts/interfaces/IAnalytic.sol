@@ -55,25 +55,14 @@ interface IAnalytic {
     }
 
     struct Predicate {
-        euint8 metaOpt;
+        uint8 metaOpt;
         PredicateOp op;
-        euint16 metaVal;
-    }
-
-    struct PredicateInput {
-        einput metaOpt;
-        PredicateOp op;
-        einput metaVal;
+        uint16 metaVal;
     }
 
     struct Answer {
         euint32 val;
         euint16[] metaVals;
-
-        // note:
-        // when answering, we need to check if the answer is valid `ebool valid`
-        // After and'ing all the condition and decrypt, if it is `false` then
-        // we emit an event of invalid answer.
     }
 
     // All errors

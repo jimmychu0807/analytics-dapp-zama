@@ -8,7 +8,7 @@ import { createInstance } from "../instance";
 import { reencryptEuint32 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
 import { countAnswerData } from "./fixtures";
-import { AggregateOp } from "./types";
+import { AggregateOp, PredicateOp } from "./types";
 
 describe("Analytic", function () {
   before(async function () {
@@ -181,7 +181,7 @@ describe("Analytic", function () {
     // prettier-ignore
     let tx = await this.analyticContract
       .connect(this.signers.alice)
-      .requestQuery(qId, [], "0x");
+      .requestQuery(qId, []);
     let receipt = await tx.wait();
 
     testEventArgs(this.analyticContract, receipt.logs, "QueryRequestCreated", [0, aliceAddr]);
@@ -207,16 +207,16 @@ describe("Analytic", function () {
     expect(decryptedRes).to.deep.equal(bucketCnt);
   });
 
-  it.only("able to query COUNT type question with no predicate in multiple steps", async function () {
+  it("able to query COUNT type question with no predicate in multiple steps", async function () {
     const { qId, ansData } = await loadCountQuestionAndAnsFixture(this);
 
     // prettier-ignore
     await this.analyticContract
       .connect(this.signers.alice)
-      .requestQuery(qId, [], "0x");
+      .requestQuery(qId, []);
 
+    // Executing the query in multiple steps. Currently the steps is manually configured
     const reqId = 0;
-    // Executing the query in three steps. Currently the steps to take is manually configured
     const steps = 6;
     const iterations = Math.floor(ansData.length / steps) + (ansData.length % steps === 0 ? 0 : 1);
     let accSteps = 0;
@@ -250,41 +250,52 @@ describe("Analytic", function () {
     expect(decryptedRes).to.deep.equal(bucketCnt);
   });
 
-  // it("able to query with one predicate in two rounds with COUNT", async function () {
-  //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
-  //   const aliceAddr = await this.signers.alice.getAddress();
-  //   const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
-  //   const inputs = await input.add64(Gender.Male).encrypt();
+  it("able to query COUNT type question with two predicates in multiple steps", async function () {
+    const { qId, ansData } = await loadCountQuestionAndAnsFixture(this);
 
-  //   let tx = await this.votingContract
-  //     .connect(this.signers.alice)
-  //     .requestQuery(
-  //       proposalId,
-  //       AggregateOp.COUNT,
-  //       [{ metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] }],
-  //       inputs.inputProof,
-  //     );
+    // prettier-ignore
+    await this.analyticContract
+      .connect(this.signers.alice)
+      .requestQuery(qId, [
+        { metaOpt: 0, op: PredicateOp.EQ, metaVal: 2 },
+        { metaOpt: 1, op: PredicateOp.GT, metaVal: 40 },
+       ]);
 
-  //   const reqId = BigInt(0);
-  //   const steps = Math.ceil(voteData.length / 2);
+    // Executing the query in multiple steps. Currently the steps is manually configured
+    const reqId = 0;
+    const steps = 6;
+    const iterations = Math.floor(ansData.length / steps) + (ansData.length % steps === 0 ? 0 : 1);
+    let accSteps = 0;
 
-  //   // Perform the 1st round of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   printGasConsumed(await tx.wait(), "1st executeQuery");
+    // Perform the multiple round of executeQuery
+    for (let i = 0; i < iterations; i++) {
+      const tx = await this.analyticContract.executeQuery(reqId, steps);
+      const receipt = await tx.wait();
+      accSteps += steps;
 
-  //   // Perform the 2nd around of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   const receipt = await tx.wait();
-  //   printGasConsumed(receipt, "2nd executeQuery");
-  //   const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
-  //   expect(eventArgs).to.deep.equal([reqId]);
+      // print gas usage
+      printGasConsumed(receipt, `executeQuery-${i}`);
+      if (i !== iterations - 1) {
+        testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionRunning", [reqId, accSteps, ansData.length]);
+      } else {
+        testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
+      }
+    }
 
-  //   // Read the value back with reencryption
-  //   const encryptedHandle = await this.votingContract.getQueryResult(reqId);
-  //   const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
-  //   const sum = voteData.filter((v) => v[2] === Gender.Male).reduce((acc, oneVote) => acc + 1, 0);
-  //   expect(queryResult).to.equal(sum);
-  // });
+    const handles: bigint[] = await this.analyticContract.getQueryResult(reqId);
+    const decryptedRes = await Promise.all(
+      handles.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
+
+    const bucketSize = 5;
+    const bucketCnt = ansData
+      .filter(([, metaVal1, metaVal2]) => metaVal1 === 2 && metaVal2 > 40)
+      .reduce((acc, ans) => {
+        acc[ans[0]] += 1;
+        return acc;
+      }, new Array(bucketSize).fill(0));
+    expect(decryptedRes).to.deep.equal(bucketCnt);
+  });
 
   // it.only("able to query with one predicate in two rounds with MAX", async function () {
   //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
