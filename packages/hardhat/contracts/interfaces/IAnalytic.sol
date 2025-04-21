@@ -86,8 +86,11 @@ interface IAnalytic {
     error RejectAnswer(uint64 qId, address sender);
     error NotQuestionAdmin(uint64 qId);
     error QueryThresholdNotReach(uint64 qId);
+
+    error InvalidQueryRequest(uint64 queryReqId);
     error NotQueryOwner(uint64 queryReqId);
     error QueryHasCompleted(uint64 queryReqId);
+    error QueryNotCompleted(uint64 queryReqId);
 
     // All the events
     event QuestionCreated(address indexed sender, uint64 indexed qId, uint256 startTime, uint256 endTime);

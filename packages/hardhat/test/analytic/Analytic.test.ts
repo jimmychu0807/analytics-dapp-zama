@@ -5,7 +5,7 @@ import hre from "hardhat";
 import { awaitAllDecryptionResults, initGateway } from "../asyncDecrypt";
 import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { createInstance } from "../instance";
-// import { reencryptEuint64 } from "../reencrypt";
+import { reencryptEuint32 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
 import { AggregateOp } from "./types";
 
@@ -69,20 +69,11 @@ describe("Analytic", function () {
       const signer = ans[0];
       const signerAddr = await signer.getAddress();
       const input = ctx.fhevm.createEncryptedInput(ctx.contractAddress, signerAddr);
-      const inputs = await input
-        .add64(ans[1])
-        .add16(ans[2])
-        .add16(ans[3])
-        .encrypt();
+      const inputs = await input.add32(ans[1]).add16(ans[2]).add16(ans[3]).encrypt();
 
       await ctx.analyticContract
         .connect(ans[0])
-        .answer(
-          qId,
-          inputs.handles[0],
-          inputs.handles.slice(1),
-          inputs.inputProof,
-        );
+        .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
     }
     await awaitAllDecryptionResults();
 
@@ -203,18 +194,23 @@ describe("Analytic", function () {
 
     // Perform one round of query
     const reqId = 0;
-    tx = await this.votingContract.executeQuery(reqId, ansData.length);
+    tx = await this.analyticContract.executeQuery(reqId, ansData.length);
     receipt = await tx.wait();
     printGasConsumed(receipt, "executeQuery");
 
-    // const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
-    // expect(eventArgs).to.deep.equal([reqId]);
+    testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
 
-    // const encryptedHandle = await this.votingContract.getQueryResult(reqId);
-    // const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
+    const handles: bigint[] = await this.analyticContract.getQueryResult(reqId);
+    const decryptedRes = await Promise.all(
+      handles.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
 
-    // const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
-    // expect(queryResult).to.equal(sum);
+    const bucketSize = 5;
+    const bucketCnt = ansData.reduce((acc, ans) => {
+      acc[ans[1]] += 1;
+      return acc;
+    }, new Array(bucketSize).fill(0));
+    expect(decryptedRes).to.deep.equal(bucketCnt);
   });
 
   // it("able to query with one predicate in two rounds with SUM", async function () {

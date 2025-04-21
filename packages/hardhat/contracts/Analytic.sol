@@ -58,6 +58,13 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         _;
     }
 
+    modifier queryValidIsOwner(uint64 qId, address sender) {
+        if (qId >= nextQueryRequestId) revert InvalidQueryRequest(qId);
+        QueryRequest storage req = queryRequests[qId];
+        if (sender != req.owner) revert NotQueryOwner(qId);
+        _;
+    }
+
     // --- write function ---
 
     function newQuestion(
@@ -180,11 +187,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         uint64 qId,
         PredicateInput[] calldata predicateInputs,
         bytes calldata inputProof
-    ) public
-        isQuestionAdmin(qId, msg.sender)
-        aboveQueryThreshold(qId)
-        returns (uint64 reqId)
-    {
+    ) public isQuestionAdmin(qId, msg.sender) aboveQueryThreshold(qId) returns (uint64 reqId) {
         reqId = nextQueryRequestId;
         Question storage question = questions[qId];
 
@@ -219,9 +222,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit QueryRequestCreated(reqId, msg.sender);
     }
 
-    function deleteQuery(uint64 reqId)
-        public
-    {
+    function deleteQuery(uint64 reqId) public queryValidIsOwner(reqId, msg.sender) {
         // Can only be deleted by the owner
         QueryRequest storage req = queryRequests[reqId];
         if (req.owner != msg.sender) revert NotQueryOwner(reqId);
@@ -229,7 +230,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit QueryRequestDeleted(reqId);
     }
 
-    function executeQuery(uint64 reqId, uint64 steps) public {
+    function executeQuery(uint64 reqId, uint64 steps) public queryValidIsOwner(reqId, msg.sender) {
         QueryRequest storage req = queryRequests[reqId];
         if (req.state == RequestState.Completed) revert QueryHasCompleted(reqId);
 
@@ -252,10 +253,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
             // connect predicate together with "AND" operator
             for (uint256 pi = 0; pi < req.predicates.length; pi += 1) {
-                accepted = TFHE.and(
-                    _checkPredicate(ans, req.predicates[pi]),
-                    accepted
-                );
+                accepted = TFHE.and(_checkPredicate(ans, req.predicates[pi]), accepted);
             }
 
             // Add count
@@ -269,7 +267,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
                 acc[accIdx] = TFHE.add(acc[accIdx], cnt);
             }
-       }
+        }
 
         // --- Writing back to the storage
         req.accSteps += actualSteps;
@@ -278,6 +276,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
             // granting read access to the req owner of the result
             for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
+                TFHE.allowThis(req.acc[ai]);
                 TFHE.allow(req.acc[ai], req.owner);
             }
 
@@ -287,20 +286,17 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
-    // function getQueryResult(uint64 reqId) public view returns (euint64) {
-    //     // require the query request state to be completed
-    //     QueryRequest storage req = queryRequests[reqId];
-    //     require(req.owner == msg.sender, "Not the owner of the query request");
-    //     require(req.state == RequestState.Completed, "request not execute to completion yet");
-    //     return req.acc;
-    // }
+    function getQueryResult(uint64 reqId) public view queryValidIsOwner(reqId, msg.sender) returns (euint32[] memory) {
+        // require the query request state to be completed
+        QueryRequest storage req = queryRequests[reqId];
+        if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
+
+        return req.acc;
+    }
 
     // // --- Internal Helper methods ---
 
-    function _checkPredicate(
-        Answer storage ans,
-        Predicate storage predicate
-    ) internal returns (ebool accepted) {
+    function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool accepted) {
         accepted = TFHE.asEbool(true);
     }
 
