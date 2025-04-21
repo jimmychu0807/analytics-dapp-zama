@@ -271,15 +271,14 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         // --- Writing back to the storage
         req.accSteps += actualSteps;
+        // granting read access to the req owner of the result
+        for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
+            TFHE.allowThis(req.acc[ai]);
+            TFHE.allow(req.acc[ai], req.owner);
+        }
+
         if (req.accSteps == answers.length) {
             req.state = RequestState.Completed;
-
-            // granting read access to the req owner of the result
-            for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
-                TFHE.allowThis(req.acc[ai]);
-                TFHE.allow(req.acc[ai], req.owner);
-            }
-
             emit QueryExecutionCompleted(reqId);
         } else {
             emit QueryExecutionRunning(reqId, req.accSteps, uint64(answers.length));
@@ -294,7 +293,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         return req.acc;
     }
 
-    // // --- Internal Helper methods ---
+    // --- Internal Helper methods ---
 
     function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool accepted) {
         accepted = TFHE.asEbool(true);
