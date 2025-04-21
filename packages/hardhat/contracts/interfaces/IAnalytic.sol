@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import { euint16, euint64 } from "fhevm/lib/TFHE.sol";
+import "fhevm/lib/TFHE.sol";
 
 interface IAnalytic {
     enum AggregateOp {
@@ -35,8 +35,8 @@ interface IAnalytic {
 
     struct Question {
         string qText;
-        uint64 ansMin;
-        uint64 ansMax;
+        uint32 ansMin;
+        uint32 ansMax;
         MetaOpt[] metaOpts;
         AggregateOp op;
         uint256 startTime;
@@ -46,23 +46,28 @@ interface IAnalytic {
     }
 
     struct QueryRequest {
-        uint64 reqId;
+        uint64 questionId;
         address owner;
         Predicate[] predicates;
-        bytes inputProof;
-        euint64 acc;
+        euint32[] acc;
         uint64 accSteps;
         RequestState state;
     }
 
     struct Predicate {
-        uint64 metaOpt;
+        euint8 metaOpt;
         PredicateOp op;
-        uint64 value;
+        euint16 metaVal;
+    }
+
+    struct PredicateInput {
+        einput metaOpt;
+        PredicateOp op;
+        einput metaVal;
     }
 
     struct Answer {
-        euint64 val;
+        euint32 val;
         euint16[] metaVals;
 
         // note:
@@ -79,13 +84,17 @@ interface IAnalytic {
     error AlreadyAnswered(uint64 qId, address sender);
     error MetaAnswerNumberNotMatch(uint64 qId, uint256 metaAnsLen, uint256 metaOptLen);
     error RejectAnswer(uint64 qId, address sender);
+    error NotQuestionAdmin(uint64 qId);
+    error QueryThresholdNotReach(uint64 qId);
+    error NotQueryOwner(uint64 queryReqId);
+    error QueryHasCompleted(uint64 queryReqId);
 
     // All the events
     event QuestionCreated(address indexed sender, uint64 indexed qId, uint256 startTime, uint256 endTime);
     event ConfirmAnswer(uint64 indexed qId, address indexed sender);
-
     event QueryRequestCreated(uint64 reqId, address owner);
     event QueryRequestDeleted(uint64 reqId);
+
     event QueryExecutionCompleted(uint64 reqId);
     event QueryExecutionRunning(uint64 reqId, uint64 accSteps, uint64 ttl);
 }

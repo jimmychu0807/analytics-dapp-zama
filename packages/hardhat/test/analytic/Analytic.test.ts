@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { TransactionReceipt } from "ethers";
+import { Contract, Log, TransactionReceipt } from "ethers";
 import hre from "hardhat";
 
 import { awaitAllDecryptionResults, initGateway } from "../asyncDecrypt";
@@ -21,13 +21,19 @@ describe("Analytic", function () {
     console.log(`${prefix}: Native & FHE gas consumed: (${receipt.gasUsed}, ${gasConsumed})`);
   }
 
-  // function getEventArgs(contract: Contract, eventLogs: Log[], eventName: string) {
-  //   const targetLogs = eventLogs
-  //     .map((log) => contract.interface.parseLog(log))
-  //     .filter((log) => log && log.name === eventName);
+  function testEventArgs(contract: Contract, eventLogs: Log[], eventName: string, args?: unknown) {
+    const targetLogs = eventLogs
+      .map((log) => contract.interface.parseLog(log))
+      .filter((log) => log && log.name === eventName);
 
-  //   return targetLogs.length > 0 ? targetLogs[0]!.args : undefined;
-  // }
+    // test such event exists
+    expect(targetLogs.length).to.be.above(0);
+
+    if (targetLogs.length > 0 && args !== undefined) {
+      const logArgs = targetLogs[0]!.args;
+      expect(logArgs).to.deep.equal(args);
+    }
+  }
 
   async function loadCountQuestionFixture(ctx: Mocha.Context) {
     const currentTS = Math.floor(Date.now() / 1000);
@@ -42,52 +48,49 @@ describe("Analytic", function () {
       .newQuestion("Which L2 chains do you use most?", metaOpts, AggregateOp.COUNT, 0, 4, currentTS, endTS, 3);
   }
 
-  // async function loadProposalAndVotesFixture(ctx: Mocha.Context, numEntries?: number) {
-  //   await loadProposalFixture(ctx);
+  async function loadCountQuestionAndAnsFixture(ctx: Mocha.Context, numEntries: number = 6) {
+    if (numEntries > 6) throw new Error("exceeded max entries");
 
-  //   const proposalId = 0;
-  //   const voteData = [
-  //     [ctx.signers.alice, 5, Gender.Female, Continent.Asia, 44],
-  //     [ctx.signers.bob, 8, Gender.Male, Continent.Asia, 25],
-  //     [ctx.signers.carol, 2, Gender.Female, Continent.Europe, 30],
-  //     [ctx.signers.dave, 4, Gender.Male, Continent.Europe, 35],
-  //     [ctx.signers.eve, 10, Gender.Female, Continent.Europe, 40],
-  //     [ctx.signers.fred, 9, Gender.Male, Continent.Africa, 30],
-  //   ];
-  //   const instance = await createInstance();
+    await loadCountQuestionFixture(ctx);
 
-  //   numEntries = numEntries ?? voteData.length;
+    const qId = 0;
+    const ansData = [
+      [ctx.signers.alice, 0, 0, 44],
+      [ctx.signers.bob, 1, 3, 25],
+      [ctx.signers.carol, 2, 3, 30],
+      [ctx.signers.dave, 0, 2, 35],
+      [ctx.signers.eve, 3, 1, 40],
+      [ctx.signers.fred, 1, 2, 30],
+    ];
 
-  //   for (let idx = 0; idx < numEntries; idx++) {
-  //     const oneVoteData = voteData[idx];
+    for (let idx = 0; idx < numEntries; idx++) {
+      const ans = ansData[idx];
 
-  //     const signer = oneVoteData[0];
-  //     const signerAddr = await signer.getAddress();
-  //     const input = instance.createEncryptedInput(ctx.contractAddress, signerAddr);
-  //     const inputs = await input
-  //       .add64(oneVoteData[1])
-  //       .add64(oneVoteData[2])
-  //       .add64(oneVoteData[3])
-  //       .add64(oneVoteData[4])
-  //       .encrypt();
+      const signer = ans[0];
+      const signerAddr = await signer.getAddress();
+      const input = ctx.fhevm.createEncryptedInput(ctx.contractAddress, signerAddr);
+      const inputs = await input
+        .add64(ans[1])
+        .add16(ans[2])
+        .add16(ans[3])
+        .encrypt();
 
-  //     await ctx.votingContract
-  //       .connect(oneVoteData[0])
-  //       .castVote(
-  //         proposalId,
-  //         inputs.handles[0],
-  //         inputs.handles[1],
-  //         inputs.handles[2],
-  //         inputs.handles[3],
-  //         inputs.inputProof,
-  //       );
-  //   }
+      await ctx.analyticContract
+        .connect(ans[0])
+        .answer(
+          qId,
+          inputs.handles[0],
+          inputs.handles.slice(1),
+          inputs.inputProof,
+        );
+    }
+    await awaitAllDecryptionResults();
 
-  //   const votesLen = await ctx.votingContract.getVotesLen(proposalId);
-  //   expect(votesLen).to.equal(voteData.length);
+    const ansLen = await ctx.analyticContract.getAnsLen(qId);
+    expect(ansLen).to.equal(ansData.length);
 
-  //   return { instance, proposalId, voteData };
-  // }
+    return { qId, ansData: ansData.slice(0, numEntries) };
+  }
 
   beforeEach(async function () {
     const contractFactory = await hre.ethers.getContractFactory("Analytic");
@@ -136,7 +139,7 @@ describe("Analytic", function () {
     });
 
     const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add64(0).add16(2).add16(41).encrypt();
+    const inputs = await input.add32(0).add16(2).add16(41).encrypt();
     const tx = await this.analyticContract
       .connect(this.signers.bob)
       .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
@@ -168,7 +171,7 @@ describe("Analytic", function () {
     const signerAddr = await signer.getAddress();
 
     const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add64(0).add16(4).add16(41).encrypt();
+    const inputs = await input.add32(0).add16(4).add16(41).encrypt();
     const tx = await this.analyticContract
       .connect(this.signers.bob)
       .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
@@ -186,31 +189,33 @@ describe("Analytic", function () {
     expect(ansLen).to.equal(0);
   });
 
-  // it("able to query with no predicate in one round with SUM", async function () {
-  //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
+  it("able to query COUNT type question with no predicate", async function () {
+    const { qId, ansData } = await loadCountQuestionAndAnsFixture(this);
 
-  //   // prettier-ignore
-  //   let tx = await this.votingContract
-  //     .connect(this.signers.alice)
-  //     .requestQuery(proposalId, AggregateOp.SUM, [], "0x");
-  //   let receipt = await tx.wait();
+    const aliceAddr = await this.signers.alice.getAddress();
+    // prettier-ignore
+    let tx = await this.analyticContract
+      .connect(this.signers.alice)
+      .requestQuery(qId, [], "0x");
+    let receipt = await tx.wait();
 
-  //   const [reqId] = getEventArgs(this.votingContract, receipt.logs, "QueryRequestCreated")!;
+    testEventArgs(this.analyticContract, receipt.logs, "QueryRequestCreated", [0, aliceAddr]);
 
-  //   // Perform one round of query
-  //   tx = await this.votingContract.executeQuery(reqId, voteData.length);
-  //   receipt = await tx.wait();
-  //   printGasConsumed(receipt, "executeQuery");
+    // Perform one round of query
+    const reqId = 0;
+    tx = await this.votingContract.executeQuery(reqId, ansData.length);
+    receipt = await tx.wait();
+    printGasConsumed(receipt, "executeQuery");
 
-  //   const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
-  //   expect(eventArgs).to.deep.equal([reqId]);
+    // const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
+    // expect(eventArgs).to.deep.equal([reqId]);
 
-  //   const encryptedHandle = await this.votingContract.getQueryResult(reqId);
-  //   const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
+    // const encryptedHandle = await this.votingContract.getQueryResult(reqId);
+    // const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
 
-  //   const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
-  //   expect(queryResult).to.equal(sum);
-  // });
+    // const sum = voteData.reduce((acc, oneVote) => acc + oneVote[1], 0);
+    // expect(queryResult).to.equal(sum);
+  });
 
   // it("able to query with one predicate in two rounds with SUM", async function () {
   //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
