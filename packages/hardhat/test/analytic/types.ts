@@ -9,3 +9,5 @@ export enum PredicateOp {
   GT,
   LT,
 }
+
+export const STATS_ANS_SIZE = 3;

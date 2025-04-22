@@ -350,92 +350,37 @@ describe("Analytic", function () {
 
   it("able to query STATS type question with no predicate in one step", async function () {
     const qId = 0;
-    const ansData = statsFixture.slice(0, 7);
+    const ansLen = 11;
+    const ansData = statsFixture.slice(0, ansLen);
     const signer = this.signers.alice;
     await loadQuestionAndAnsFixtures(this, loadStatsQuestionFixture, ansData);
 
     await this.analyticContract.connect(signer).requestQuery(qId, []);
 
-    // const steps = ansData.length;
-    // const reqId = 0;
-    // tx = await this.analyticContract.executeQuery(reqId, steps);
-    // printGasConsumed(await tx.wait(), "executeQuery");
+    // Perform one round of query
+    const reqId = 0;
+    const tx = await this.analyticContract.executeQuery(reqId, ansLen);
+    const receipt = await tx.wait();
+    printGasConsumed(receipt, "executeQuery");
+
+    testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
+
+    const result = await this.analyticContract.getQueryResult(reqId);
+    const decryptedRes = await Promise.all(
+      result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
+    const filteredAnsCount = await reencryptEuint32(
+      this.signers.alice,
+      this.fhevm,
+      result.filteredAnsCount,
+      this.contractAddress,
+    );
+
+    const ansVals = ansData.map((d) => d[0]);
+    const stats = [Math.min(...ansVals), ansVals.reduce((acc, v) => acc + v), Math.max(...ansVals)];
+
+    expect(decryptedRes).to.deep.equal(stats);
+    expect(filteredAnsCount).to.equal(ansLen);
+    expect(result.ttlAnsCount).to.equal(ansLen);
   });
-
-  // it.only("able to query with one predicate in two rounds with MIN", async function () {
-  //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
-  //   const aliceAddr = await this.signers.alice.getAddress();
-  //   const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
-  //   const inputs = await input.add64(Gender.Male).encrypt();
-
-  //   let tx = await this.votingContract
-  //     .connect(this.signers.alice)
-  //     .requestQuery(
-  //       proposalId,
-  //       AggregateOp.MIN,
-  //       [{ metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] }],
-  //       inputs.inputProof,
-  //     );
-
-  //   const reqId = BigInt(0);
-  //   const steps = Math.ceil(voteData.length / 2);
-
-  //   // Perform the 1st round of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   printGasConsumed(await tx.wait(), "1st executeQuery");
-
-  //   // Perform the 2nd around of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   const receipt = await tx.wait();
-  //   printGasConsumed(receipt, "2nd executeQuery");
-  //   const eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
-  //   expect(eventArgs).to.deep.equal([reqId]);
-
-  //   // Read the value back with reencryption
-  //   const encryptedHandle = await this.votingContract.getQueryResult(reqId);
-  //   const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
-  //   const max = voteData.filter((v) => v[2] === Gender.Male).reduce((acc, oneVote) => acc > oneVote[1] ? acc : oneVote[1], 0);
-  //   expect(queryResult).to.equal(max);
-  // });
-
-  // it("able to query with two predicates in two rounds with SUM", async function () {
-  //   const { instance, proposalId, voteData } = await loadProposalAndVotesFixture(this);
-  //   const aliceAddr = await this.signers.alice.getAddress();
-  //   const input = instance.createEncryptedInput(this.contractAddress, aliceAddr);
-  //   const inputs = await input.add64(Gender.Male).add64(29).encrypt();
-  //   let tx = await this.votingContract.connect(this.signers.alice).requestQuery(
-  //     proposalId,
-  //     AggregateOp.SUM,
-  //     [
-  //       { metaOpt: 0, op: PredicateOp.EQ, handle: inputs.handles[0] },
-  //       { metaOpt: 2, op: PredicateOp.GT, handle: inputs.handles[1] },
-  //     ],
-  //     inputs.inputProof,
-  //   );
-
-  //   const reqId = BigInt(0);
-  //   const steps = Math.ceil(voteData.length / 2);
-
-  //   // Perform the 1st round of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   let receipt = await tx.wait();
-  //   printGasConsumed(receipt, "1st executeQuery");
-
-  //   let eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionRunning");
-  //   expect(eventArgs).to.deep.equal([reqId, steps, voteData.length]);
-
-  //   // Perform the 2nd around of query
-  //   tx = await this.votingContract.executeQuery(reqId, steps);
-  //   receipt = await tx.wait();
-  //   printGasConsumed(receipt, "2nd executeQuery");
-
-  //   eventArgs = getEventArgs(this.votingContract, receipt.logs, "QueryExecutionCompleted");
-  //   expect(eventArgs).to.deep.equal([reqId]);
-
-  //   // Read the value back with reencryption
-  //   const encryptedHandle = await this.votingContract.getQueryResult(reqId);
-  //   const queryResult = await reencryptEuint64(this.signers.alice, instance, encryptedHandle, this.contractAddress);
-  //   const sum = voteData.filter((v) => v[2] === Gender.Male && v[4] > 29).reduce((acc, oneVote) => acc + oneVote[1], 0);
-  //   expect(queryResult).to.equal(sum);
-  // });
 });
