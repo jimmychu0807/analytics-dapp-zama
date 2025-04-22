@@ -13,6 +13,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     uint16 public constant QTXT_MAX_LEN = 512;
     uint16 public constant MTXT_MAX_LEN = 512;
     uint16 public constant MAX_OPTIONS = 4;
+    // has to correspond to the sie of enum StatsAnsPos
+    uint8 public constant STATS_ANS_SIZE = 3;
 
     // --- storage ---
     uint64 public nextQuestionId = 0;
@@ -191,9 +193,24 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Question storage question = questions[qId];
 
         euint32 eZero = TFHE.asEuint32(0);
-        euint32[] memory acc = new euint32[](question.ansMax + 1);
-        for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
-            acc[i] = eZero;
+        euint32[] memory acc;
+
+        if (question.op == AggregateOp.Count) {
+            acc = new euint32[](question.ansMax + 1);
+            for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
+                acc[i] = eZero;
+            }
+        } else if (question.op == AggregateOp.Stats) {
+            acc = new euint32[](STATS_ANS_SIZE);
+            for (uint64 i = 0; i < STATS_ANS_SIZE; i++) {
+                if (StatsAnsPos(i) == StatsAnsPos.Min) {
+                    acc[i] = TFHE.asEuint32(question.ansMax);
+                } else if (StatsAnsPos(i) == StatsAnsPos.Max) {
+                    acc[i] = TFHE.asEuint32(question.ansMin);
+                } else {
+                    acc[i] = eZero;
+                }
+            }
         }
 
         // create the queryRequest
@@ -233,8 +250,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         // --- This is where the query execution happens ---
         ebool eTrue = TFHE.asEbool(true);
-        // euint64 eNullifier = TFHE.asEuint64(0);
-        // ebool eFalse = TFHE.asEbool(false);
         euint32[] storage acc = req.acc;
 
         for (uint64 ai = req.accSteps; ai < req.accSteps + actualSteps; ai += 1) {
@@ -246,16 +261,10 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
                 accepted = TFHE.and(_checkPredicate(ans, req.predicates[pi]), accepted);
             }
 
-            // Add count
-            for (uint32 accIdx = question.ansMin; accIdx <= question.ansMax; accIdx++) {
-                // cnt is either a 0 or 1
-                // prettier-ignore
-                euint32 cnt = TFHE.asEuint32(TFHE.and(
-                    accepted,
-                    TFHE.eq(ans.val, TFHE.asEuint32(accIdx))
-                ));
-
-                acc[accIdx] = TFHE.add(acc[accIdx], cnt);
+            if (question.op == AggregateOp.Count) {
+                _aggregateCountAns(acc, req.questionId, accepted, ans);
+            } else if (question.op == AggregateOp.Stats) {
+                _aggregateStatsAns(acc, req.questionId, accepted, ans);
             }
         }
 
@@ -284,14 +293,28 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     }
 
     // --- Internal Helper methods ---
+    function _aggregateStatsAns(euint32[] storage acc, uint64 qId, ebool accepted, Answer storage ans) internal {
+    }
+
+    function _aggregateCountAns(euint32[] storage acc, uint64 qId, ebool accepted, Answer storage ans) internal {
+        Question storage question = questions[qId];
+        // Add count
+        for (uint32 accIdx = question.ansMin; accIdx <= question.ansMax; accIdx++) {
+            // cnt is either a 0 or 1
+            // prettier-ignore
+            euint32 cnt = TFHE.asEuint32(TFHE.and(
+                accepted,
+                TFHE.eq(ans.val, TFHE.asEuint32(accIdx))
+            ));
+
+            acc[accIdx] = TFHE.add(acc[accIdx], cnt);
+        }
+    }
 
     function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool) {
         if (predicate.op == PredicateOp.EQ) return TFHE.eq(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         if (predicate.op == PredicateOp.NE) return TFHE.ne(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         if (predicate.op == PredicateOp.GT) return TFHE.gt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         return TFHE.lt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
     }
 

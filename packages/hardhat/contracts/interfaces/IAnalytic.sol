@@ -5,8 +5,14 @@ import "fhevm/lib/TFHE.sol";
 
 interface IAnalytic {
     enum AggregateOp {
-        COUNT, // For example 1 - count on the options pollers choose
-        STATS // For example 2 - perform min,max,avg on the numeric ans people give
+        Count, // For example 1 - count on the options pollers choose
+        Stats // For example 2 - perform min,max,avg on the numeric ans people give
+    }
+
+    enum StatsAnsPos {
+        Min,
+        Avg,
+        Max
     }
 
     enum PredicateOp {
