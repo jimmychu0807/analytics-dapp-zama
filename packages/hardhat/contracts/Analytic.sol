@@ -13,6 +13,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     uint16 public constant QTXT_MAX_LEN = 512;
     uint16 public constant MTXT_MAX_LEN = 512;
     uint16 public constant MAX_OPTIONS = 4;
+    // has to correspond to the sie of enum StatsAnsPos
+    uint8 public constant STATS_ANS_SIZE = 3;
 
     // --- storage ---
     uint64 public nextQuestionId = 0;
@@ -191,9 +193,18 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Question storage question = questions[qId];
 
         euint32 eZero = TFHE.asEuint32(0);
-        euint32[] memory acc = new euint32[](question.ansMax + 1);
-        for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
-            acc[i] = eZero;
+        euint32[] memory acc;
+
+        if (question.op == AggregateOp.Count) {
+            acc = new euint32[](question.ansMax + 1);
+            for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
+                acc[i] = eZero;
+            }
+        } else if (question.op == AggregateOp.Stats) {
+            acc = new euint32[](STATS_ANS_SIZE);
+            acc[uint256(StatsAnsPos.Min)] = TFHE.asEuint32(question.ansMax);
+            acc[uint256(StatsAnsPos.Avg)] = eZero;
+            acc[uint256(StatsAnsPos.Max)] = TFHE.asEuint32(question.ansMin);
         }
 
         // create the queryRequest
@@ -203,11 +214,21 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             predicates: predicates,
             acc: acc,
             accSteps: 0,
+            ansCount: eZero,
             state: RequestState.Initialized
         });
 
         queryRequests[reqId] = queryReq;
         nextQueryRequestId += 1;
+
+        // granting access
+        for (uint256 i = 0; i < queryReq.acc.length; i++) {
+            TFHE.allowThis(queryReq.acc[i]);
+            TFHE.allow(queryReq.acc[i], msg.sender);
+        }
+
+        TFHE.allowThis(queryReq.ansCount);
+        TFHE.allow(queryReq.ansCount, msg.sender);
 
         emit QueryRequestCreated(reqId, msg.sender);
     }
@@ -220,24 +241,22 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit QueryRequestDeleted(reqId);
     }
 
-    function executeQuery(uint64 reqId, uint64 steps) public queryValidIsOwner(reqId, msg.sender) {
+    function executeQuery(uint64 reqId, uint32 steps) public queryValidIsOwner(reqId, msg.sender) {
         QueryRequest storage req = queryRequests[reqId];
         if (req.state == RequestState.Completed) revert QueryHasCompleted(reqId);
 
         Question storage question = questions[req.questionId];
         Answer[] storage answers = questionAnswers[req.questionId];
 
-        uint64 actualSteps = steps;
-        uint64 stepsToEnd = uint64(answers.length) - req.accSteps;
+        uint32 actualSteps = steps;
+        uint32 stepsToEnd = uint32(answers.length) - req.accSteps;
         if (stepsToEnd < steps) actualSteps = stepsToEnd;
 
         // --- This is where the query execution happens ---
         ebool eTrue = TFHE.asEbool(true);
-        // euint64 eNullifier = TFHE.asEuint64(0);
-        // ebool eFalse = TFHE.asEbool(false);
         euint32[] storage acc = req.acc;
 
-        for (uint64 ai = req.accSteps; ai < req.accSteps + actualSteps; ai += 1) {
+        for (uint32 ai = req.accSteps; ai < req.accSteps + actualSteps; ai += 1) {
             Answer storage ans = answers[ai];
             ebool accepted = eTrue;
 
@@ -245,24 +264,22 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             for (uint256 pi = 0; pi < req.predicates.length; pi += 1) {
                 accepted = TFHE.and(_checkPredicate(ans, req.predicates[pi]), accepted);
             }
+            req.ansCount = TFHE.add(req.ansCount, TFHE.asEuint32(accepted));
 
-            // Add count
-            for (uint32 accIdx = question.ansMin; accIdx <= question.ansMax; accIdx++) {
-                // cnt is either a 0 or 1
-                // prettier-ignore
-                euint32 cnt = TFHE.asEuint32(TFHE.and(
-                    accepted,
-                    TFHE.eq(ans.val, TFHE.asEuint32(accIdx))
-                ));
-
-                acc[accIdx] = TFHE.add(acc[accIdx], cnt);
+            if (question.op == AggregateOp.Count) {
+                _aggregateCountAns(acc, req.questionId, accepted, ans);
+            } else if (question.op == AggregateOp.Stats) {
+                _aggregateStatsAns(acc, accepted, ans);
             }
         }
 
         // --- Writing back to the storage
         req.accSteps += actualSteps;
+
         // granting read access to the req owner of the result
-        for (uint256 ai = question.ansMin; ai <= question.ansMax; ai++) {
+        TFHE.allowThis(req.ansCount);
+        TFHE.allow(req.ansCount, req.owner);
+        for (uint256 ai = 0; ai < req.acc.length; ai++) {
             TFHE.allowThis(req.acc[ai]);
             TFHE.allow(req.acc[ai], req.owner);
         }
@@ -275,23 +292,50 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
-    function getQueryResult(uint64 reqId) public view queryValidIsOwner(reqId, msg.sender) returns (euint32[] memory) {
+    function getQueryResult(
+        uint64 reqId
+    ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
         // require the query request state to be completed
         QueryRequest storage req = queryRequests[reqId];
         if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
 
-        return req.acc;
+        return QueryResult({ acc: req.acc, filteredAnsCount: req.ansCount, ttlAnsCount: req.accSteps });
     }
 
     // --- Internal Helper methods ---
+    function _aggregateStatsAns(euint32[] storage acc, ebool accepted, Answer storage ans) internal {
+        // min
+        uint256 minPos = uint256(StatsAnsPos.Min);
+        acc[minPos] = TFHE.select(accepted, TFHE.min(acc[minPos], ans.val), acc[minPos]);
+
+        // avg - basically summation - avg is computed at client side
+        uint256 avgPos = uint256(StatsAnsPos.Avg);
+        acc[avgPos] = TFHE.select(accepted, TFHE.add(acc[avgPos], ans.val), acc[avgPos]);
+
+        // max
+        uint256 maxPos = uint256(StatsAnsPos.Max);
+        acc[maxPos] = TFHE.select(accepted, TFHE.max(acc[maxPos], ans.val), acc[maxPos]);
+    }
+
+    function _aggregateCountAns(euint32[] storage acc, uint64 qId, ebool accepted, Answer storage ans) internal {
+        Question storage question = questions[qId];
+        // Add count
+        for (uint32 accIdx = question.ansMin; accIdx <= question.ansMax; accIdx++) {
+            // cnt is either a 0 or 1
+            // prettier-ignore
+            euint32 cnt = TFHE.asEuint32(TFHE.and(
+                accepted,
+                TFHE.eq(ans.val, TFHE.asEuint32(accIdx))
+            ));
+
+            acc[accIdx] = TFHE.add(acc[accIdx], cnt);
+        }
+    }
 
     function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool) {
         if (predicate.op == PredicateOp.EQ) return TFHE.eq(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         if (predicate.op == PredicateOp.NE) return TFHE.ne(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         if (predicate.op == PredicateOp.GT) return TFHE.gt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-
         return TFHE.lt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
     }
 

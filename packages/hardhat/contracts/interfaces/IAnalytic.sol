@@ -5,8 +5,14 @@ import "fhevm/lib/TFHE.sol";
 
 interface IAnalytic {
     enum AggregateOp {
-        COUNT, // For example 1 - count on the options pollers choose
-        STATS // For example 2 - perform min,max,avg on the numeric ans people give
+        Count, // For example 1 - count on the options pollers choose
+        Stats // For example 2 - perform min,max,avg on the numeric ans people give
+    }
+
+    enum StatsAnsPos {
+        Min,
+        Avg,
+        Max
     }
 
     enum PredicateOp {
@@ -50,8 +56,15 @@ interface IAnalytic {
         address owner;
         Predicate[] predicates;
         euint32[] acc;
-        uint64 accSteps;
+        euint32 ansCount;
+        uint32 accSteps;
         RequestState state;
+    }
+
+    struct QueryResult {
+        euint32[] acc;
+        euint32 filteredAnsCount;
+        uint32 ttlAnsCount;
     }
 
     struct Predicate {

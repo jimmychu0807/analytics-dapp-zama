@@ -1,6 +1,6 @@
 export enum AggregateOp {
-  COUNT,
-  STATS,
+  Count,
+  Stats,
 }
 
 export enum PredicateOp {
