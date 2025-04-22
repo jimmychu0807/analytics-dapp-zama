@@ -56,8 +56,15 @@ interface IAnalytic {
         address owner;
         Predicate[] predicates;
         euint32[] acc;
-        uint64 accSteps;
+        euint32 ansCount;
+        uint32 accSteps;
         RequestState state;
+    }
+
+    struct QueryResult {
+        euint32[] acc;
+        euint32 filteredAnsCount;
+        uint32 ttlAnsCount;
     }
 
     struct Predicate {

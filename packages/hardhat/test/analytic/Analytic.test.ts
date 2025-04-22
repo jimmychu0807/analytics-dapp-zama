@@ -188,8 +188,10 @@ describe("Analytic", function () {
   });
 
   it("able to query COUNT type question with no predicate in one step", async function () {
+    const ansLen = 6;
     const qId = 0;
-    const ansData = countFixture.slice(0, 7);
+    const ansData = countFixture.slice(0, ansLen);
+
     await loadQuestionAndAnsFixtures(this, loadCountQuestionFixture, ansData);
 
     const aliceAddr = await this.signers.alice.getAddress();
@@ -203,15 +205,21 @@ describe("Analytic", function () {
 
     // Perform one round of query
     const reqId = 0;
-    tx = await this.analyticContract.executeQuery(reqId, ansData.length);
+    tx = await this.analyticContract.executeQuery(reqId, ansLen);
     receipt = await tx.wait();
     printGasConsumed(receipt, "executeQuery");
 
     testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
 
-    const handles: bigint[] = await this.analyticContract.getQueryResult(reqId);
+    const result = await this.analyticContract.getQueryResult(reqId);
     const decryptedRes = await Promise.all(
-      handles.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+      result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
+    const filteredAnsCount = await reencryptEuint32(
+      this.signers.alice,
+      this.fhevm,
+      result.filteredAnsCount,
+      this.contractAddress,
     );
 
     const bucketSize = 5;
@@ -219,12 +227,16 @@ describe("Analytic", function () {
       acc[ans[0]] += 1;
       return acc;
     }, new Array(bucketSize).fill(0));
+
     expect(decryptedRes).to.deep.equal(bucketCnt);
+    expect(filteredAnsCount).to.equal(ansLen);
+    expect(result.ttlAnsCount).to.equal(ansLen);
   });
 
   it("able to query COUNT type question with no predicate in multiple steps", async function () {
     const qId = 0;
-    const ansData = countFixture.slice(0, 20);
+    const ansLen = 20;
+    const ansData = countFixture.slice(0, ansLen);
     await loadQuestionAndAnsFixtures(this, loadCountQuestionFixture, ansData);
 
     // prettier-ignore
@@ -242,10 +254,10 @@ describe("Analytic", function () {
     for (let i = 0; i < iterations; i++) {
       const tx = await this.analyticContract.executeQuery(reqId, steps);
       const receipt = await tx.wait();
-      accSteps += steps;
+      accSteps = Math.min(accSteps + steps, ansLen);
 
       // print gas usage
-      printGasConsumed(receipt, `executeQuery-${i}`);
+      printGasConsumed(receipt, `executeQuery (${accSteps}/${ansLen})`);
       if (i !== iterations - 1) {
         testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionRunning", [reqId, accSteps, ansData.length]);
       } else {
@@ -254,9 +266,15 @@ describe("Analytic", function () {
     }
 
     // Read the value back with reencryption
-    const handles: bigint[] = await this.analyticContract.getQueryResult(reqId);
+    const result = await this.analyticContract.getQueryResult(reqId);
     const decryptedRes = await Promise.all(
-      handles.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+      result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
+    const filteredAnsCount = await reencryptEuint32(
+      this.signers.alice,
+      this.fhevm,
+      result.filteredAnsCount,
+      this.contractAddress,
     );
 
     const bucketSize = 5;
@@ -264,12 +282,16 @@ describe("Analytic", function () {
       acc[ans[0]] += 1;
       return acc;
     }, new Array(bucketSize).fill(0));
+
     expect(decryptedRes).to.deep.equal(bucketCnt);
+    expect(filteredAnsCount).to.equal(ansLen);
+    expect(result.ttlAnsCount).to.deep.equal(ansLen);
   });
 
   it("able to query COUNT type question with two predicates in multiple steps", async function () {
     const qId = 0;
-    const ansData = countFixture.slice(0, 20);
+    const ansLen = 20;
+    const ansData = countFixture.slice(0, ansLen);
     await loadQuestionAndAnsFixtures(this, loadCountQuestionFixture, ansData);
 
     // prettier-ignore
@@ -282,7 +304,7 @@ describe("Analytic", function () {
 
     // Executing the query in multiple steps. Currently the steps is manually configured
     const reqId = 0;
-    const steps = 6;
+    const steps = 5;
     const iterations = Math.floor(ansData.length / steps) + (ansData.length % steps === 0 ? 0 : 1);
     let accSteps = 0;
 
@@ -290,10 +312,10 @@ describe("Analytic", function () {
     for (let i = 0; i < iterations; i++) {
       const tx = await this.analyticContract.executeQuery(reqId, steps);
       const receipt = await tx.wait();
-      accSteps += steps;
+      accSteps = Math.min(accSteps + steps, ansLen);
 
       // print gas usage
-      printGasConsumed(receipt, `executeQuery-${i}`);
+      printGasConsumed(receipt, `executeQuery (${accSteps}/${ansLen})`);
       if (i !== iterations - 1) {
         testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionRunning", [reqId, accSteps, ansData.length]);
       } else {
@@ -301,28 +323,38 @@ describe("Analytic", function () {
       }
     }
 
-    const handles: bigint[] = await this.analyticContract.getQueryResult(reqId);
+    // Read the value back with reencryption
+    const result = await this.analyticContract.getQueryResult(reqId);
     const decryptedRes = await Promise.all(
-      handles.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+      result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
+    );
+    const filteredAnsCount = await reencryptEuint32(
+      this.signers.alice,
+      this.fhevm,
+      result.filteredAnsCount,
+      this.contractAddress,
     );
 
     const bucketSize = 5;
-    const bucketCnt = ansData
-      .filter(([, metaVal1, metaVal2]) => metaVal1 === 2 && metaVal2 > 40)
-      .reduce((acc, ans) => {
-        acc[ans[0]] += 1;
-        return acc;
-      }, new Array(bucketSize).fill(0));
+    const filteredAns = ansData.filter(([, metaVal1, metaVal2]) => metaVal1 === 2 && metaVal2 > 40);
+
+    const bucketCnt = filteredAns.reduce((acc, ans) => {
+      acc[ans[0]] += 1;
+      return acc;
+    }, new Array(bucketSize).fill(0));
+
     expect(decryptedRes).to.deep.equal(bucketCnt);
+    expect(filteredAnsCount).to.equal(filteredAns.length);
+    expect(result.ttlAnsCount).to.deep.equal(ansLen);
   });
 
-  it.only("able to query STATS type question with no predicate in one step", async function () {
+  it("able to query STATS type question with no predicate in one step", async function () {
     const qId = 0;
     const ansData = statsFixture.slice(0, 7);
     const signer = this.signers.alice;
     await loadQuestionAndAnsFixtures(this, loadStatsQuestionFixture, ansData);
 
-    let tx = await this.analyticContract.connect(signer).requestQuery(qId, []);
+    await this.analyticContract.connect(signer).requestQuery(qId, []);
 
     // const steps = ansData.length;
     // const reqId = 0;
