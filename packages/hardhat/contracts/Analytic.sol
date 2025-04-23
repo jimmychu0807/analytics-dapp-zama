@@ -268,7 +268,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
             if (question.op == AggregateOp.Count) {
                 _aggregateCountAns(acc, req.questionId, accepted, ans);
-            } else if (question.op == AggregateOp.Stats) {
+            } else {
                 _aggregateStatsAns(acc, accepted, ans);
             }
         }
