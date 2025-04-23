@@ -203,7 +203,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         } else if (question.op == AggregateOp.Stats) {
             acc = new euint32[](STATS_ANS_SIZE);
             acc[uint256(StatsAnsPos.Min)] = TFHE.asEuint32(question.ansMax);
-            acc[uint256(StatsAnsPos.Avg)] = eZero;
+            acc[uint256(StatsAnsPos.Sum)] = eZero;
             acc[uint256(StatsAnsPos.Max)] = TFHE.asEuint32(question.ansMin);
         }
 
@@ -268,7 +268,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
             if (question.op == AggregateOp.Count) {
                 _aggregateCountAns(acc, req.questionId, accepted, ans);
-            } else if (question.op == AggregateOp.Stats) {
+            } else {
                 _aggregateStatsAns(acc, accepted, ans);
             }
         }
@@ -309,7 +309,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         acc[minPos] = TFHE.select(accepted, TFHE.min(acc[minPos], ans.val), acc[minPos]);
 
         // avg - basically summation - avg is computed at client side
-        uint256 avgPos = uint256(StatsAnsPos.Avg);
+        uint256 avgPos = uint256(StatsAnsPos.Sum);
         acc[avgPos] = TFHE.select(accepted, TFHE.add(acc[avgPos], ans.val), acc[avgPos]);
 
         // max
@@ -338,27 +338,4 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (predicate.op == PredicateOp.GT) return TFHE.gt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
         return TFHE.lt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
     }
-
-    // function _aggregateVote(euint64 acc, AggregateOp aggOp, euint64 val) internal returns (euint64 retVal) {
-    //     euint64 eZero = TFHE.asEuint64(0);
-    //     euint64 eOne = TFHE.asEuint64(1);
-
-    //     // TODO:
-    //     //   1. work on AggregateOp.AVG
-    //     //   2. min doesn't work with nullifier of 0
-    //     // prettier-ignore
-    //     retVal = TFHE.select(
-    //         TFHE.asEbool(aggOp == AggregateOp.COUNT),
-    //         TFHE.add(acc, TFHE.select(TFHE.ne(val, eZero), eOne, eZero)),
-    //         TFHE.select(
-    //             TFHE.asEbool(aggOp == AggregateOp.SUM),
-    //             TFHE.add(acc, val),
-    //             TFHE.select(
-    //                 TFHE.asEbool(aggOp == AggregateOp.MIN),
-    //                 TFHE.min(acc, val),
-    //                 TFHE.max(acc, val)
-    //             )
-    //         )
-    //     );
-    // }
 }

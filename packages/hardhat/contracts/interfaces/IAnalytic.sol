@@ -11,7 +11,7 @@ interface IAnalytic {
 
     enum StatsAnsPos {
         Min,
-        Avg,
+        Sum,
         Max
     }
 
