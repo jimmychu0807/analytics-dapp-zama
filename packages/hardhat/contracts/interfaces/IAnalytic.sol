@@ -2,13 +2,9 @@
 pragma solidity ^0.8.24;
 
 import "fhevm/lib/TFHE.sol";
+import "../QuestionSpecLib.sol";
 
 interface IAnalytic {
-    enum AggregateOp {
-        Count, // For example 1 - count on the options pollers choose
-        Stats // For example 2 - perform min,max,avg on the numeric ans people give
-    }
-
     enum StatsAnsPos {
         Min,
         Sum,
@@ -33,22 +29,13 @@ interface IAnalytic {
         Closed
     }
 
-    struct MetaOpt {
-        string text;
-        uint16 min;
-        uint16 max;
-    }
-
     struct Question {
-        string qText;
-        uint32 ansMin;
-        uint32 ansMax;
-        MetaOpt[] metaOpts;
-        AggregateOp op;
+        QuestionSpec main;
+        QuestionSpec[] metas;
         uint256 startTime;
         uint256 endTime;
         QuestionState state;
-        uint16 queryThreshold;
+        uint32 queryThreshold;
     }
 
     struct QueryRequest {
@@ -70,12 +57,12 @@ interface IAnalytic {
     struct Predicate {
         uint8 metaOpt;
         PredicateOp op;
-        uint16 metaVal;
+        uint32 metaVal;
     }
 
     struct Answer {
         euint32 val;
-        euint16[] metaVals;
+        euint32[] metaVals;
     }
 
     // All errors

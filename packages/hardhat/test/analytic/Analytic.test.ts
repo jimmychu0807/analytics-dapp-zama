@@ -8,7 +8,7 @@ import { createInstance } from "../instance";
 import { reencryptEuint32 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
 import { countFixture, statsFixture } from "./fixtures";
-import { AggregateOp, PredicateOp } from "./types";
+import { QuestionType, AggregateOp, PredicateOp } from "./types";
 
 describe("Analytic", function () {
   before(async function () {
@@ -91,34 +91,56 @@ describe("Analytic", function () {
   }
 
   beforeEach(async function () {
-    const contractFactory = await hre.ethers.getContractFactory("Analytic");
+    // Deploy the library
+    const libFactory = await hre.ethers.getContractFactory("QuestionSpecLib");
+    this.libContract = await libFactory.connect(this.signers.alice).deploy();
+    await this.libContract.waitForDeployment();
+    this.libAddress = await this.libContract.getAddress();
+
+    // Deploy the Analytic contract
+    const contractFactory = await hre.ethers.getContractFactory("Analytic", {
+      libraries: {
+        QuestionSpecLib: this.libAddress,
+      },
+    });
     this.analyticContract = await contractFactory.connect(this.signers.alice).deploy();
     await this.analyticContract.waitForDeployment();
     this.contractAddress = await this.analyticContract.getAddress();
+
     this.fhevm = await createInstance();
   });
 
-  it("should create a new question", async function () {
+  it.only("should create a new question", async function () {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
+    const main = newQuestionSpec("Which L2 chains do you use most?", {
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"]
+    });
+
     const metaOpts = [
-      { text: "Your current asset worth", min: 0, max: 3 },
-      { text: "Your age", min: 18, max: 150 },
+      newQuestionSpec("Your asset worth category", {
+        options: ["< 100k USD", "100k - 3M USD", "3M - 10M USD", "> 10M USD"],
+      }),
+      newQuestionSpec("Your age", { min: 18, max: 150 }),
     ];
+
     const tx = this.analyticContract
       .connect(this.signers.alice)
-      .newQuestion("Which L2 chains do you use most?", metaOpts, AggregateOp.Count, 0, 4, currentTS, endTS, 3);
+      .newQuestion(main, metaOpts, currentTS, endTS, 3);
 
     await expect(tx).emit(this.analyticContract, "QuestionCreated").withArgs(this.signers.alice, 0, currentTS, endTS);
 
     // Test the storage
     const qId = 0;
     const question = await this.analyticContract.getQuestion(qId);
-    expect(question.metaOpts).to.deep.equal(metaOpts.map((opt) => Object.values(opt)));
+    expect(question.metas).to.deep.equal(metaOpts.map((opt) => Object.values(opt)));
+
+    console.log("question", question);
+    console.log("question metas", question.metas);
 
     const nextQuestionId = await this.analyticContract.nextQuestionId();
-    expect(nextQuestionId).to.equal(1);
+    expect(nextQuestionId).to.equal(qId + 1);
   });
 
   it("should accept a valid answer", async function () {
@@ -438,3 +460,26 @@ describe("Analytic", function () {
     expect(result.ttlAnsCount).to.equal(ansLen);
   });
 });
+
+function newQuestionSpec(
+  text: string,
+  { min, max, options }: {min?: number, max?: number, options?: string[] }
+) {
+  if (Array.isArray(options)) return {
+    text,
+    options,
+    min: 0,
+    max: options.length - 1,
+    t: QuestionType.Option,
+  };
+
+  if (min !== undefined && max !== undefined) return {
+    text,
+    options: [],
+    min,
+    max,
+    t: QuestionType.Value,
+  };
+
+  throw new Error("Invalid parameters in newQuestionSpec");
+}

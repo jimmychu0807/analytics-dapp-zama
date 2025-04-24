@@ -1,3 +1,8 @@
+export enum QuestionType {
+  Option,
+  Value,
+}
+
 export enum AggregateOp {
   Count,
   Stats,
