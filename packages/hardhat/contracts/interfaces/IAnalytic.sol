@@ -30,8 +30,8 @@ interface IAnalytic {
     }
 
     struct Question {
-        QuestionSpec main;
-        QuestionSpec[] metas;
+        QuestionSpecLib.QuestionSpec main;
+        QuestionSpecLib.QuestionSpec[] metas;
         uint256 startTime;
         uint256 endTime;
         QuestionState state;

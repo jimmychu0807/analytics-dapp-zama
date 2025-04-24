@@ -8,7 +8,7 @@ import { createInstance } from "../instance";
 import { reencryptEuint32 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
 import { countFixture, statsFixture } from "./fixtures";
-import { QuestionType, AggregateOp, PredicateOp } from "./types";
+import { PredicateOp, QuestionType } from "./types";
 
 describe("Analytic", function () {
   before(async function () {
@@ -40,26 +40,31 @@ describe("Analytic", function () {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
-    const metaOpts = [
-      { text: "Your gender", min: 0, max: 1 },
-      { text: "Years of working experience", min: 0, max: 150 },
+    const main = newQuestionSpec("What is your annual salary?", { min: 1, max: 1e8 });
+
+    const metas = [
+      newQuestionSpec("Your gender", { options: ["male", "female"] }),
+      newQuestionSpec("Years of working experience", { min: 0, max: 100 }),
     ];
-    await ctx.analyticContract
-      .connect(ctx.signers.alice)
-      .newQuestion("What is your annual salary?", metaOpts, AggregateOp.Stats, 0, 1e9, currentTS, endTS, 3);
+    await ctx.analyticContract.connect(ctx.signers.alice).newQuestion(main, metas, currentTS, endTS, 3);
   }
 
   async function loadCountQuestionFixture(ctx: Mocha.Context) {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
-    const metaOpts = [
-      { text: "Your current asset worth category", min: 0, max: 3 },
-      { text: "Your age", min: 18, max: 150 },
+    const main = newQuestionSpec("Which L2 chains do you use most?", {
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"],
+    });
+
+    const metas = [
+      newQuestionSpec("Your asset worth category", {
+        options: ["< 100k USD", "100k - 3M USD", "3M - 10M USD", "> 10M USD"],
+      }),
+      newQuestionSpec("Your age", { min: 18, max: 150 }),
     ];
-    await ctx.analyticContract
-      .connect(ctx.signers.alice)
-      .newQuestion("Which L2 chains do you use most?", metaOpts, AggregateOp.Count, 0, 4, currentTS, endTS, 3);
+
+    await ctx.analyticContract.connect(ctx.signers.alice).newQuestion(main, metas, currentTS, endTS, 3);
   }
 
   async function loadQuestionAndAnsFixtures(
@@ -78,7 +83,7 @@ describe("Analytic", function () {
       const signer = signers[idx];
       const signerAddr = signerAddrs[idx];
       const input = ctx.fhevm.createEncryptedInput(ctx.contractAddress, signerAddr);
-      const inputs = await input.add32(ans[0]).add16(ans[1]).add16(ans[2]).encrypt();
+      const inputs = await input.add32(ans[0]).add32(ans[1]).add32(ans[2]).encrypt();
 
       await ctx.analyticContract
         .connect(signer)
@@ -110,12 +115,12 @@ describe("Analytic", function () {
     this.fhevm = await createInstance();
   });
 
-  it.only("should create a new question", async function () {
+  it("should create a new question", async function () {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
     const main = newQuestionSpec("Which L2 chains do you use most?", {
-      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"]
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"],
     });
 
     const metaOpts = [
@@ -125,9 +130,7 @@ describe("Analytic", function () {
       newQuestionSpec("Your age", { min: 18, max: 150 }),
     ];
 
-    const tx = this.analyticContract
-      .connect(this.signers.alice)
-      .newQuestion(main, metaOpts, currentTS, endTS, 3);
+    const tx = this.analyticContract.connect(this.signers.alice).newQuestion(main, metaOpts, currentTS, endTS, 3);
 
     await expect(tx).emit(this.analyticContract, "QuestionCreated").withArgs(this.signers.alice, 0, currentTS, endTS);
 
@@ -135,9 +138,6 @@ describe("Analytic", function () {
     const qId = 0;
     const question = await this.analyticContract.getQuestion(qId);
     expect(question.metas).to.deep.equal(metaOpts.map((opt) => Object.values(opt)));
-
-    console.log("question", question);
-    console.log("question metas", question.metas);
 
     const nextQuestionId = await this.analyticContract.nextQuestionId();
     expect(nextQuestionId).to.equal(qId + 1);
@@ -159,7 +159,7 @@ describe("Analytic", function () {
     });
 
     const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add32(0).add16(2).add16(41).encrypt();
+    const inputs = await input.add32(0).add32(2).add32(41).encrypt();
     const tx = await this.analyticContract
       .connect(this.signers.bob)
       .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
@@ -191,7 +191,7 @@ describe("Analytic", function () {
     const signerAddr = await signer.getAddress();
 
     const input = this.fhevm.createEncryptedInput(this.contractAddress, signerAddr);
-    const inputs = await input.add32(0).add16(4).add16(41).encrypt();
+    const inputs = await input.add32(0).add32(4).add32(41).encrypt();
     const tx = await this.analyticContract
       .connect(this.signers.bob)
       .answer(qId, inputs.handles[0], inputs.handles.slice(1), inputs.inputProof);
@@ -406,7 +406,7 @@ describe("Analytic", function () {
     expect(result.ttlAnsCount).to.equal(ansLen);
   });
 
-  it("able to query STATS type question with two predicates in multiple steps", async function () {
+  it.only("able to query STATS type question with two predicates in multiple steps", async function () {
     const qId = 0;
     const ansLen = 20;
     const ansData = statsFixture.slice(0, ansLen);
@@ -461,25 +461,24 @@ describe("Analytic", function () {
   });
 });
 
-function newQuestionSpec(
-  text: string,
-  { min, max, options }: {min?: number, max?: number, options?: string[] }
-) {
-  if (Array.isArray(options)) return {
-    text,
-    options,
-    min: 0,
-    max: options.length - 1,
-    t: QuestionType.Option,
-  };
+function newQuestionSpec(text: string, { min, max, options }: { min?: number; max?: number; options?: string[] }) {
+  if (Array.isArray(options))
+    return {
+      text,
+      options,
+      min: 0,
+      max: options.length - 1,
+      t: QuestionType.Option,
+    };
 
-  if (min !== undefined && max !== undefined) return {
-    text,
-    options: [],
-    min,
-    max,
-    t: QuestionType.Value,
-  };
+  if (min !== undefined && max !== undefined)
+    return {
+      text,
+      options: [],
+      min,
+      max,
+      t: QuestionType.Value,
+    };
 
   throw new Error("Invalid parameters in newQuestionSpec");
 }

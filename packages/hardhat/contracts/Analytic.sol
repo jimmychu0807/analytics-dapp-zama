@@ -6,12 +6,12 @@ import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
 import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IAnalytic } from "./interfaces/IAnalytic.sol";
-import { QuestionType, QuestionSpec, QuestionSpecLib } from "./QuestionSpecLib.sol";
+import { QuestionSpecLib } from "./QuestionSpecLib.sol";
 import { console } from "hardhat/console.sol";
 
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
     // --- library ---
-    using QuestionSpecLib for QuestionSpec;
+    using QuestionSpecLib for QuestionSpecLib.QuestionSpec;
 
     // --- constant ---
     uint16 public constant MAX_METAS = 4;
@@ -71,8 +71,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     // --- write function ---
     function newQuestion(
-        QuestionSpec calldata _main,
-        QuestionSpec[] calldata _metas,
+        QuestionSpecLib.QuestionSpec calldata _main,
+        QuestionSpecLib.QuestionSpec[] calldata _metas,
         uint256 _startTime,
         uint256 _endTime,
         uint32 _queryThreshold
@@ -119,10 +119,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         // Check the encrypted input and put result in eValid.
         // Later on we will decrypt this value to check the validity
         euint32 eAns = TFHE.asEuint32(ans, inputProof);
-        ebool eValid = TFHE.and(
-            TFHE.ge(eAns, question.main.min),
-            TFHE.le(eAns, question.main.max)
-        );
+        ebool eValid = TFHE.and(TFHE.ge(eAns, question.main.min), TFHE.le(eAns, question.main.max));
 
         euint32[] memory eMetaAns = new euint32[](metaAns.length);
         for (uint256 mIdx = 0; mIdx < metaAns.length; ++mIdx) {
@@ -166,12 +163,13 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (!decValid) revert RejectAnswer(qId, sender);
 
         // valid Answer
-        // prettier-ignore
-        Answer memory ans = Answer({
-            val: getParamsEUint32(reqId)[0],
-            // note: this maybe a problem here
-            metaVals: getParamsEUint32(reqId)
-        });
+        euint32[] memory params = getParamsEUint32(reqId);
+        euint32[] memory metaVals = new euint32[](params.length - 1);
+        for (uint256 i = 0; i < params.length - 1; i++) {
+            metaVals[i] = params[i + 1];
+        }
+
+        Answer memory ans = Answer({ val: params[0], metaVals: metaVals });
 
         questionAnswers[qId].push(ans);
         hasAnswered[qId][sender] = true;
@@ -188,7 +186,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         euint32 eZero = TFHE.asEuint32(0);
         euint32[] memory acc;
 
-        if (question.main.t == QuestionType.Option) {
+        if (question.main.t == QuestionSpecLib.QuestionType.Option) {
             acc = new euint32[](question.main.max + 1);
             for (uint64 i = 0; i <= question.main.max; i++) {
                 acc[i] = eZero;
@@ -259,7 +257,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             }
             req.ansCount = TFHE.add(req.ansCount, TFHE.asEuint32(accepted));
 
-            if (question.main.t == QuestionType.Option) {
+            if (question.main.t == QuestionSpecLib.QuestionType.Option) {
                 _aggregateCountAns(acc, req.questionId, accepted, ans);
             } else {
                 _aggregateStatsAns(acc, accepted, ans);
