@@ -1,6 +1,6 @@
-export enum AggregateOp {
-  Count,
-  Stats,
+export enum QuestionType {
+  Option,
+  Value,
 }
 
 export enum PredicateOp {
@@ -9,5 +9,3 @@ export enum PredicateOp {
   GT,
   LT,
 }
-
-export const STATS_ANS_SIZE = 3;

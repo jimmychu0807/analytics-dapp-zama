@@ -6,13 +6,15 @@ import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
 import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IAnalytic } from "./interfaces/IAnalytic.sol";
-// import { console } from "hardhat/console.sol";
+import { QuestionSpecLib } from "./QuestionSpecLib.sol";
+import { console } from "hardhat/console.sol";
 
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
+    // --- library ---
+    using QuestionSpecLib for QuestionSpecLib.QuestionSpec;
+
     // --- constant ---
-    uint16 public constant QTXT_MAX_LEN = 512;
-    uint16 public constant MTXT_MAX_LEN = 512;
-    uint16 public constant MAX_OPTIONS = 4;
+    uint16 public constant MAX_METAS = 4;
     // has to correspond to the sie of enum StatsAnsPos
     uint8 public constant STATS_ANS_SIZE = 3;
 
@@ -20,7 +22,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     uint64 public nextQuestionId = 0;
     mapping(uint64 => Question) public questions;
     mapping(uint64 => Answer[]) public questionAnswers;
-    mapping(uint64 => mapping(address => bool)) public isQuestionAdmins;
+    mapping(uint64 => mapping(address => bool)) public questionAdmins;
     mapping(uint64 => mapping(address => bool)) public hasAnswered;
 
     uint64 public nextQueryRequestId = 0;
@@ -50,7 +52,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     modifier isQuestionAdmin(uint64 qId, address sender) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
-        if (!isQuestionAdmins[qId][sender]) revert NotQuestionAdmin(qId);
+        if (!questionAdmins[qId][sender]) revert NotQuestionAdmin(qId);
         _;
     }
 
@@ -68,42 +70,29 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     }
 
     // --- write function ---
-
     function newQuestion(
-        string calldata _qText,
-        MetaOpt[] calldata _metaOpts,
-        AggregateOp _op,
-        uint32 _ansMin,
-        uint32 _ansMax,
+        QuestionSpecLib.QuestionSpec calldata _main,
+        QuestionSpecLib.QuestionSpec[] calldata _metas,
         uint256 _startTime,
         uint256 _endTime,
-        uint16 _queryThreshold
+        uint32 _queryThreshold
     ) public {
-        if (bytes(_qText).length > QTXT_MAX_LEN) revert InvalidQuestionParam("questionText max length exceeded");
-        if (_metaOpts.length > MAX_OPTIONS) revert InvalidQuestionParam("max meta options exceeded");
+        if (_metas.length > MAX_METAS) revert InvalidQuestionParam("max meta options exceeded");
         if (_startTime >= _endTime) revert InvalidQuestionParam("Start time should be less than end time");
-        if (_ansMin >= _ansMax) revert InvalidQuestionParam("ansMin should be less than ansMax");
 
-        for (uint256 i = 0; i < _metaOpts.length; i++) {
-            if (bytes(_metaOpts[i].text).length > MTXT_MAX_LEN)
-                revert InvalidQuestionMetaParam("metaText max length exceeded");
-            if (_metaOpts[i].min >= _metaOpts[i].max) revert InvalidQuestionMetaParam("min should be less than max");
-        }
+        _main.validate();
+        for (uint256 i = 0; i < _metas.length; i++) _metas[i].validate();
 
         uint64 qId = nextQuestionId;
-
         Question memory question = Question({
-            qText: _qText,
-            ansMin: _ansMin,
-            ansMax: _ansMax,
-            op: _op,
-            metaOpts: _metaOpts,
+            main: _main,
+            metas: _metas,
             startTime: _startTime,
             endTime: _endTime,
             state: QuestionState.Initialized,
             queryThreshold: _queryThreshold
         });
-        isQuestionAdmins[qId][msg.sender] = true;
+        questionAdmins[qId][msg.sender] = true;
         questions[qId] = question;
         nextQuestionId += 1;
 
@@ -121,8 +110,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Question storage question = questions[qId];
 
         // Check the metaAns len has to be equal to question metaOpts
-        if (metaAns.length != question.metaOpts.length)
-            revert MetaAnswerNumberNotMatch(qId, metaAns.length, question.metaOpts.length);
+        if (metaAns.length != question.metas.length)
+            revert MetaAnswerNumberNotMatch(qId, metaAns.length, question.metas.length);
 
         // Update the question state
         if (question.state != QuestionState.Open) question.state = QuestionState.Open;
@@ -130,16 +119,16 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         // Check the encrypted input and put result in eValid.
         // Later on we will decrypt this value to check the validity
         euint32 eAns = TFHE.asEuint32(ans, inputProof);
-        ebool eValid = TFHE.and(TFHE.ge(eAns, question.ansMin), TFHE.le(eAns, question.ansMax));
+        ebool eValid = TFHE.and(TFHE.ge(eAns, question.main.min), TFHE.le(eAns, question.main.max));
 
-        euint16[] memory eMetaAns = new euint16[](metaAns.length);
+        euint32[] memory eMetaAns = new euint32[](metaAns.length);
         for (uint256 mIdx = 0; mIdx < metaAns.length; ++mIdx) {
-            eMetaAns[mIdx] = TFHE.asEuint16(metaAns[mIdx], inputProof);
+            eMetaAns[mIdx] = TFHE.asEuint32(metaAns[mIdx], inputProof);
             eValid = TFHE.and(
                 eValid,
                 TFHE.and(
-                    TFHE.ge(eMetaAns[mIdx], question.metaOpts[mIdx].min),
-                    TFHE.le(eMetaAns[mIdx], question.metaOpts[mIdx].max)
+                    TFHE.ge(eMetaAns[mIdx], question.metas[mIdx].min),
+                    TFHE.le(eMetaAns[mIdx], question.metas[mIdx].max)
                 )
             );
         }
@@ -162,7 +151,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         TFHE.allowThis(eAns);
 
         for (uint256 mIdx = 0; mIdx < eMetaAns.length; ++mIdx) {
-            addParamsEUint16(reqId, eMetaAns[mIdx]);
+            addParamsEUint32(reqId, eMetaAns[mIdx]);
             TFHE.allowThis(eMetaAns[mIdx]);
         }
     }
@@ -174,11 +163,13 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (!decValid) revert RejectAnswer(qId, sender);
 
         // valid Answer
-        // prettier-ignore
-        Answer memory ans = Answer({
-            val: getParamsEUint32(reqId)[0],
-            metaVals: getParamsEUint16(reqId)
-        });
+        euint32[] memory params = getParamsEUint32(reqId);
+        euint32[] memory metaVals = new euint32[](params.length - 1);
+        for (uint256 i = 0; i < params.length - 1; i++) {
+            metaVals[i] = params[i + 1];
+        }
+
+        Answer memory ans = Answer({ val: params[0], metaVals: metaVals });
 
         questionAnswers[qId].push(ans);
         hasAnswered[qId][sender] = true;
@@ -195,16 +186,16 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         euint32 eZero = TFHE.asEuint32(0);
         euint32[] memory acc;
 
-        if (question.op == AggregateOp.Count) {
-            acc = new euint32[](question.ansMax + 1);
-            for (uint64 i = question.ansMin; i <= question.ansMax; i++) {
+        if (question.main.t == QuestionSpecLib.QuestionType.Option) {
+            acc = new euint32[](question.main.max + 1);
+            for (uint64 i = 0; i <= question.main.max; i++) {
                 acc[i] = eZero;
             }
-        } else if (question.op == AggregateOp.Stats) {
+        } else {
             acc = new euint32[](STATS_ANS_SIZE);
-            acc[uint256(StatsAnsPos.Min)] = TFHE.asEuint32(question.ansMax);
+            acc[uint256(StatsAnsPos.Min)] = TFHE.asEuint32(question.main.max);
             acc[uint256(StatsAnsPos.Sum)] = eZero;
-            acc[uint256(StatsAnsPos.Max)] = TFHE.asEuint32(question.ansMin);
+            acc[uint256(StatsAnsPos.Max)] = TFHE.asEuint32(question.main.min);
         }
 
         // create the queryRequest
@@ -266,7 +257,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             }
             req.ansCount = TFHE.add(req.ansCount, TFHE.asEuint32(accepted));
 
-            if (question.op == AggregateOp.Count) {
+            if (question.main.t == QuestionSpecLib.QuestionType.Option) {
                 _aggregateCountAns(acc, req.questionId, accepted, ans);
             } else {
                 _aggregateStatsAns(acc, accepted, ans);
@@ -320,7 +311,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     function _aggregateCountAns(euint32[] storage acc, uint64 qId, ebool accepted, Answer storage ans) internal {
         Question storage question = questions[qId];
         // Add count
-        for (uint32 accIdx = question.ansMin; accIdx <= question.ansMax; accIdx++) {
+        for (uint32 accIdx = 0; accIdx <= question.main.max; accIdx++) {
             // cnt is either a 0 or 1
             // prettier-ignore
             euint32 cnt = TFHE.asEuint32(TFHE.and(

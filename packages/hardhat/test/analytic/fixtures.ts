@@ -9,7 +9,7 @@
 // collect meta data [0 - 3]
 //   1. your asset amount:
 //     0. < 100 USDT
-//     1. 100 USDT - 10000 USDT
+//     1. 100 USD - 10000 USD
 //     2. 10000 USDT - 100000 USDT
 //     3. lg> 100000 USDT
 //   2. your age: 44
