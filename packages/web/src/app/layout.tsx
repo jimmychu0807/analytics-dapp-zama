@@ -34,8 +34,10 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers initialState={initialState}>
-          <div className="flex flex-row items-start justify-center min-h-screen gap-12 px-8 mb-8 md:px-[0] font-[family-name:var(--font-geist-sans)]">
-            <main className="flex flex-col gap-8 mt-8 items-center sm:items-start">{children}</main>
+          <div className="flex flex-col items-start justify-center min-h-screen gap-12 px-8 mb-8 md:px-[0] font-[family-name:var(--font-geist-sans)]">
+            <header>Header</header>
+            <main>{children}</main>
+            <footer class="bg-gray-800 text-gray-200 p-4 text-center">Footer</footer>
           </div>
           <Toaster richColors closeButton={true} />
         </Providers>
