@@ -29,3 +29,5 @@ res/
 running_node/
 
 docker-compose/docker-compose-full.yml
+
+*.tar.gz
