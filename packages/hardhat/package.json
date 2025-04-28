@@ -10,6 +10,7 @@
     "url": "https://jimmychu0807.hk"
   },
   "scripts": {
+    "dev": "hardhat node --tags Analytic --export ../web/src/abi/localhost.json",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
     "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat compile",
     "typecheck": "tsc --noEmit",

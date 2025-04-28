@@ -9,6 +9,9 @@
     "name": "Jimmy Chu",
     "url": "https://jimmychu0807.hk"
   },
+  "scripts": {
+    "dev": "pnpm -r --stream --filter './packages/*' run dev"
+  },
   "devDependencies": {
   },
   "keywords": [
