@@ -1,4 +1,3 @@
-import { MessageCircleQuestion } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -9,15 +8,18 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
+import NewQuestionDialog from "@/components/NewQuestionDialog"
+
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center gap-8">
-      <div className="pt-8">
-        <Button variant="outline" size="lg">
-          <MessageCircleQuestion/>
-          New Question
-        </Button>
-      </div>
+      <section className="py-4">
+        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">Analytic dApp</h4>
+        <p className="text-muted-foreground text-center">built on Zama</p>
+      </section>
+
+      <NewQuestionDialog/>
+
       <div className="self-start px-6">
         <Card className="w-[350px]">
           <CardHeader>
