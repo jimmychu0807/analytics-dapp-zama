@@ -1,25 +1,27 @@
-import {HardhatRuntimeEnvironment} from 'hardhat/types';
-import {DeployFunction} from 'hardhat-deploy/types';
+import { DeployFunction } from "hardhat-deploy/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const {deployments, getNamedAccounts} = hre;
-  const {deploy} = deployments;
+  const { deployments, getNamedAccounts } = hre;
+  const { deploy } = deployments;
 
-  const {deployer} = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
 
-  const lib = await deploy('QuestionSpecLib', {
+  const lib = await deploy("QuestionSpecLib", {
     from: deployer,
     log: true,
   });
 
-  const analyticContract = await deploy('Analytic', {
+  const analyticContract = await deploy("Analytic", {
     from: deployer,
     libraries: {
-      QuestionSpecLib: lib.address
+      QuestionSpecLib: lib.address,
     },
     log: true,
-  })
+  });
 
+  console.log(`lib address: ${lib.address}`);
+  console.log(`analyticContract address: ${analyticContract.address}`);
 };
 
 export default func;
