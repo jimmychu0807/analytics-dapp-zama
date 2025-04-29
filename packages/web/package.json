@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --dir ./src",
+    "lint": "pnpm compile && next lint --dir ./src && pnpm prettier",
     "prettier": "prettier --no-error-on-unmatched-pattern -c \"{src,test}/**/*.{json,ts,tsx}\"",
     "prettier:write": "prettier --no-error-on-unmatched-pattern -w \"{src,test}/**/*.{json,ts,tsx}\"",
     "compile": "tsc --noEmit",

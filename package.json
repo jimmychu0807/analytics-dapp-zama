@@ -10,7 +10,10 @@
     "url": "https://jimmychu0807.hk"
   },
   "scripts": {
-    "dev": "pnpm -r --stream --filter './packages/*' run dev"
+    "dev": "pnpm -r --stream --filter './packages/*' run dev",
+    "lint": "pnpm -r --stream --filter './packages/*' run lint",
+    "build": "pnpm -r --stream --filter './packages/*' run build",
+    "test": "pnpm -r --stream --filter './packages/*' run test"
   },
   "devDependencies": {
   },

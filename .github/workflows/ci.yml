@@ -32,20 +32,17 @@ jobs:
             "exchange vintage ocean narrow danger return culture ignore trim solve clock hidden buddy wise emotion"
           SEPOLIA_RPC_URL: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID"
 
-      - name: "Lint the code"
+      - name: "Lint"
         run: |
-          cd packages/hardhat
           pnpm lint
 
-      - name: "Add lint summary"
+      - name: "Build"
         run: |
-          echo "## Lint results" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+          pnpm build
 
-      - name: "Test the contracts"
+      - name: "Test"
         run: |
-          cd packages/hardhat
-          pnpm test:all
+          pnpm test
 
         env:
           MNEMONIC:

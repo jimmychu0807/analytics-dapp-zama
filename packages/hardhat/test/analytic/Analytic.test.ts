@@ -406,7 +406,7 @@ describe("Analytic", function () {
     expect(result.ttlAnsCount).to.equal(ansLen);
   });
 
-  it.only("able to query STATS type question with two predicates in multiple steps", async function () {
+  it("able to query STATS type question with two predicates in multiple steps", async function () {
     const qId = 0;
     const ansLen = 20;
     const ansData = statsFixture.slice(0, ansLen);
