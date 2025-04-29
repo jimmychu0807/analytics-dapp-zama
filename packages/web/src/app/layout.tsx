@@ -20,7 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Analytic dApp built on Zama",
-  description: "Analytic dApp allowing analysts to query on-chain confidential data with dynamic predicate.",
+  description:
+    "Analytic dApp allowing analysts to query on-chain confidential data with dynamic predicate.",
 };
 
 export default async function RootLayout({
@@ -28,11 +29,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialState = cookieToInitialState(getConfig(), (await headers()).get("cookie"));
+  const initialState = cookieToInitialState(
+    getConfig(),
+    (await headers()).get("cookie")
+  );
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <Providers initialState={initialState}>
           <div className="flex flex-col items-center justify-center min-h-screen md:px-[0] font-[family-name:var(--font-geist-sans)]">
             <header className="h-20 flex flex-row items-center">Header</header>
