@@ -41,9 +41,14 @@ export default function NewQuestionDialog() {
     setDialogOpen(false);
   };
 
-  const submitNewQuestion = (ev: FormEvent<HTMLElement>) => {
+  const submitNewQuestion = (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
-    console.log("submit new question");
+
+    const formData = new FormData(ev.target as HTMLFormElement);
+    for (const pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
     setMetaNum(0);
     setDialogOpen(false);
   };
@@ -71,7 +76,7 @@ export default function NewQuestionDialog() {
               <QuestionSpec legendName="Main Question" prefix="main" />
               <div>
                 <span className="text-sm font-semibold px-4">
-                  Filter Criteria ({metaNum}/4)
+                  Meta Information ({metaNum}/4)
                 </span>
                 <Button
                   variant="outline"
@@ -85,7 +90,7 @@ export default function NewQuestionDialog() {
               {[...Array(metaNum).keys()].map((idx) => (
                 <QuestionSpec
                   key={`criteria-${idx}`}
-                  legendName={`Criteria ${idx}`}
+                  legendName={`Criteria ${idx + 1}`}
                   prefix={`criteria-${idx}`}
                 />
               ))}
