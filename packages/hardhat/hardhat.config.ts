@@ -92,7 +92,9 @@ const config: HardhatUserConfig = {
     hardhat: {
       accounts: {
         count: 50,
-        mnemonic,
+        // Using default hardhat mnemonic
+        // ref: https://hardhat.org/hardhat-network/docs/reference#accounts
+        mnemonic: "test test test test test test test test test test test junk",
         path: "m/44'/60'/0'/0",
       },
     },

@@ -8,18 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { WalletConnect } from "@/components/WalletConnect";
 import NewQuestionDialog from "@/components/NewQuestionDialog";
+import { REQUIRED_CHAIN_ID } from "@/utils";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center gap-8">
-      <div className="py-4">
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
-          Analytics dApp
-        </h4>
-        <p className="text-muted-foreground text-center">built on Zama</p>
+      <div>
+        <WalletConnect requiredChainId={REQUIRED_CHAIN_ID} />
       </div>
-
       <div>
         <NewQuestionDialog />
       </div>
