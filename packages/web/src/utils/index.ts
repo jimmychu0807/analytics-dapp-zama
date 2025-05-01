@@ -1,6 +1,6 @@
-import { type Address, formatEther as viemFormatEther } from "viem";
+import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
 import { http, cookieStorage, createConfig, createStorage } from "wagmi";
-import { sepolia, baseSepolia, localhost } from "wagmi/chains";
+import { sepolia, localhost } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
 // TODO: fix this so it works for reading on different chains
@@ -11,23 +11,23 @@ export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
 
 // TODO: fix this for sepolia
-export const REQUIRED_CHAIN_ID = localhost.id;
+export const REQUIRED_CHAIN_ID = Number(deployment.chainId);
 export const DEPLOYMENT = process.env.NEXT_PUBLIC_DEPLOYMENT;
 
 const { contracts } = deployment;
-export const QuestionSpecLib = {
+export const questionSpecLib = {
   address: contracts.QuestionSpecLib.address as Address,
-  abi: contracts.QuestionSpecLib.abi,
-};
+  abi: contracts.QuestionSpecLib.abi as Abi,
+} as const;
 
-export const AnalyticContract = {
+export const analyticContract = {
   address: contracts.Analytic.address as Address,
-  abi: contracts.Analytic.abi,
-};
+  abi: contracts.Analytic.abi as Abi,
+} as const;
 
 export function getConfig() {
   return createConfig({
-    chains: [localhost, sepolia, baseSepolia],
+    chains: [localhost, sepolia],
     connectors: [injected()],
     storage: createStorage({
       storage: cookieStorage,
@@ -36,7 +36,6 @@ export function getConfig() {
     transports: {
       [localhost.id]: http(ethRpcUrl),
       [sepolia.id]: http(ethRpcUrl),
-      [baseSepolia.id]: http(ethRpcUrl),
     },
   });
 }

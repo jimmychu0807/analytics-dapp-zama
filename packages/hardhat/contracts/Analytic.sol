@@ -40,6 +40,16 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         return answers.length;
     }
 
+    function getQueryResult(
+        uint64 reqId
+    ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
+        // require the query request state to be completed
+        QueryRequest storage req = queryRequests[reqId];
+        if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
+
+        return QueryResult({ acc: req.acc, filteredAnsCount: req.ansCount, ttlAnsCount: req.accSteps });
+    }
+
     // --- modifier ---
     modifier questionValidAndOpen(uint64 qId) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
@@ -281,16 +291,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         } else {
             emit QueryExecutionRunning(reqId, req.accSteps, uint64(answers.length));
         }
-    }
-
-    function getQueryResult(
-        uint64 reqId
-    ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
-        // require the query request state to be completed
-        QueryRequest storage req = queryRequests[reqId];
-        if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
-
-        return QueryResult({ acc: req.acc, filteredAnsCount: req.ansCount, ttlAnsCount: req.accSteps });
     }
 
     // --- Internal Helper methods ---

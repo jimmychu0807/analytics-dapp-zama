@@ -1,18 +1,18 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+"use client";
+import { useReadContract } from "wagmi";
 
 import { WalletConnect } from "@/components/WalletConnect";
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
-import { REQUIRED_CHAIN_ID } from "@/utils";
+import { QuestionSetCard } from "@/components/QuestionSetCard";
+import { analyticContract, REQUIRED_CHAIN_ID } from "@/utils";
 
 export default function Home() {
+  const { data: nextQuestionId, isSuccess } = useReadContract({
+    ...analyticContract,
+    functionName: "nextQuestionId",
+    query: { refetchInterval: 10000 },
+  });
+
   return (
     <div className="flex flex-col items-center justify-center gap-8">
       <div>
@@ -21,19 +21,17 @@ export default function Home() {
       <div>
         <NewQuestionDialog />
       </div>
-
-      <div className="self-start px-6">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <CardTitle>Card Title</CardTitle>
-            <CardDescription>Card Description</CardDescription>
-          </CardHeader>
-          <CardContent>Some content here</CardContent>
-          <CardFooter className="flex justify-between">
-            <Button>Okay</Button>
-          </CardFooter>
-        </Card>
-      </div>
+      {!isSuccess ? (
+        <div>Loading...</div>
+      ) : nextQuestionId === 0 ? (
+        <div>No question. Create a question now 🙋</div>
+      ) : (
+        <div className="self-start px-6 flex gap-8 flex-wrap">
+          {[...Array(Number(nextQuestionId)).keys()].map((qId) => (
+            <QuestionSetCard key={`q-${qId}`} qId={qId} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
