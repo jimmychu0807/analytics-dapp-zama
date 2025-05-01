@@ -51,9 +51,6 @@ function Button({
     disabled?: boolean;
   }) {
   const Comp = asChild ? Slot : "button";
-
-  console.log(props);
-
   const { children, ...exceptChildren } = props;
 
   return (
