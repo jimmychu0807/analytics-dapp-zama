@@ -90,6 +90,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      chainId: 1337,
       accounts: {
         count: 50,
         // Using default hardhat mnemonic

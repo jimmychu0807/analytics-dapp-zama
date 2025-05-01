@@ -19,15 +19,32 @@ import {
 } from "@headlessui/react";
 import { ChevronDownIcon, PlusIcon } from "@heroicons/react/20/solid";
 import { MessageCircleQuestion } from "lucide-react";
+import { usePublicClient, useWalletClient } from "wagmi";
 
 import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 
-import { MAX_METAS } from "@/utils";
+import { MAX_METAS, parseFormDataIntoQuestionData } from "@/utils";
+import { submitNewQuestionTx } from "@/utils/chainInteractions";
 
-export default function NewQuestionDialog() {
+// Styles
+const labelClasses = "text-sm/6 font-medium text-black text-right";
+const textInputClasses = clsx(
+  "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+  "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25"
+);
+const selectInputClasses = clsx(
+  "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+  "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
+  "*:text-black"
+);
+
+export function NewQuestionDialog() {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [isLoading, setLoading] = useState<boolean>(false);
   const [metaNum, setMetaNum] = useState<number>(0);
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
 
   const incMeta = (ev: MouseEvent<HTMLElement>) => {
     ev.preventDefault();
@@ -41,16 +58,36 @@ export default function NewQuestionDialog() {
     setDialogOpen(false);
   };
 
-  const submitNewQuestion = (ev: FormEvent<HTMLFormElement>) => {
+  const submitNewQuestion = async (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
 
     const formData = new FormData(ev.target as HTMLFormElement);
-    for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
+    // TODO: perform data validation on formData
 
-    setMetaNum(0);
-    setDialogOpen(false);
+    if (!publicClient || !walletClient) return;
+
+    setLoading(true);
+    const questionObj = parseFormDataIntoQuestionData(formData);
+    const { main, metas, startTime, endTime, queryThreshold } = questionObj;
+
+    try {
+      const receipt = await submitNewQuestionTx(publicClient, walletClient, {
+        main,
+        metas,
+        startTime,
+        endTime,
+        queryThreshold,
+      });
+
+      console.log("submitNewQuestion", receipt);
+
+      // Close only when the above ops succeeed
+      setMetaNum(0);
+      setDialogOpen(false);
+    } catch (err) {
+      console.error("Error on submitNewQuestion:", (err as Error).message);
+    }
+    setLoading(false);
   };
 
   return (
@@ -74,6 +111,47 @@ export default function NewQuestionDialog() {
 
             <form onSubmit={submitNewQuestion}>
               <QuestionSpec legendName="Main Question" prefix="main" />
+
+              {/*Start time, end time */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Field className="col-span-2">
+                  <div className="grid grid-cols-2 items-center gap-4">
+                    <Label className={labelClasses}>Start Time</Label>
+                    <Input
+                      required
+                      type="datetime-local"
+                      name="start-datetime"
+                      className={textInputClasses}
+                    />
+                  </div>
+                </Field>
+                <Field className="col-start-3 col-span-2">
+                  <div className="grid grid-cols-2 items-center gap-4">
+                    <Label className={labelClasses}>End Time</Label>
+                    <Input
+                      required
+                      type="datetime-local"
+                      name="end-datetime"
+                      className={textInputClasses}
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              {/* queryThreshold */}
+              <Field>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className={labelClasses}>Query Threshold</Label>
+                  <Input
+                    required
+                    min={0}
+                    type="number"
+                    name="query-threshold"
+                    className={clsx(textInputClasses, "col-span-3")}
+                  />
+                </div>
+              </Field>
+
               <div>
                 <span className="text-sm font-semibold px-4">
                   Meta Information ({metaNum}/4)
@@ -91,15 +169,21 @@ export default function NewQuestionDialog() {
                 <QuestionSpec
                   key={`criteria-${idx}`}
                   legendName={`Criteria ${idx + 1}`}
-                  prefix={`criteria-${idx}`}
+                  prefix={`criteria${idx}`}
                 />
               ))}
 
               <div className="flex gap-4 items-center justify-center py-4">
-                <Button variant="outline" onClick={closeDialog}>
+                <Button
+                  disabled={isLoading}
+                  variant="outline"
+                  onClick={closeDialog}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">Create</Button>
+                <Button isLoading={isLoading} type="submit">
+                  Create
+                </Button>
               </div>
             </form>
           </DialogPanel>
@@ -132,17 +216,6 @@ function QuestionSpec({
     setOptNum((on) => on + 1);
   };
 
-  const labelClasses = "text-sm/6 font-medium text-black text-right";
-  const textInputClasses = clsx(
-    "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-    "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25"
-  );
-  const selectInputClasses = clsx(
-    "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-    "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
-    "*:text-black"
-  );
-
   return (
     <>
       <Fieldset>
@@ -151,6 +224,7 @@ function QuestionSpec({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className={labelClasses}>Text</Label>
             <Input
+              required
               name={`${prefix}-qText`}
               className={clsx(textInputClasses, "col-span-3")}
             />
@@ -184,6 +258,7 @@ function QuestionSpec({
                 <Label className={labelClasses}>Min</Label>
                 <Input
                   type="number"
+                  min={0}
                   name={`${prefix}-min`}
                   className={textInputClasses}
                 />
@@ -194,6 +269,7 @@ function QuestionSpec({
                 <Label className={labelClasses}>Max</Label>
                 <Input
                   type="number"
+                  min={0}
                   name={`${prefix}-max`}
                   className={textInputClasses}
                 />
@@ -202,19 +278,17 @@ function QuestionSpec({
           </div>
         ) : (
           <>
-            <Field>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className={labelClasses}>Options</Label>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={incOpt}
-                  className="mt-2"
-                >
-                  <PlusIcon />
-                </Button>
-              </div>
-            </Field>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className={labelClasses}>Options</Label>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={incOpt}
+                className="mt-2"
+              >
+                <PlusIcon />
+              </Button>
+            </div>
 
             {[...Array(optNum).keys()].map((idx) => (
               <div
