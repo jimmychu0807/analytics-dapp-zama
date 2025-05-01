@@ -36,8 +36,7 @@ yarn-error.log*
 # vercel
 .vercel
 
-# abi files for web
-src/abi/localhost.json
+# deployment files on localhost
 
 # typescript
 *.tsbuildinfo

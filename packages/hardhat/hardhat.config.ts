@@ -90,6 +90,9 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      // To make metamask compatible with hardhat node
+      // ref: https://hardhat.org/hardhat-network/docs/metamask-issue
+      chainId: 1337,
       accounts: {
         count: 50,
         // Using default hardhat mnemonic

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 
 import { WalletConnect } from "@/components/WalletConnect";
-import NewQuestionDialog from "@/components/NewQuestionDialog";
+import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { REQUIRED_CHAIN_ID } from "@/utils";
 
 export default function Home() {
