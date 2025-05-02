@@ -2,10 +2,16 @@ import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
 import { http, cookieStorage, createConfig, createStorage } from "wagmi";
 import { sepolia, localhost } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
+import { DateTime } from "luxon";
 
 // TODO: fix this so it works for reading on different chains
 import deployment from "@/deployment/localhost.json";
-import { QuestionType, type QuestionSpec } from "../types";
+import {
+  QuestionType,
+  QuestionState,
+  type QuestionSpec,
+  type QuestionSet,
+} from "../types";
 
 export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
@@ -42,6 +48,20 @@ export function getConfig() {
 
 export function formatEther(value: bigint, decimal: number = 3): string {
   return Number(viemFormatEther(value)).toFixed(decimal).toString();
+}
+
+export function formatDatetime(timestamp: number): string {
+  const dt = DateTime.fromMillis(timestamp * 1000);
+  return dt.toFormat("yyyy-MM-dd hh:mm");
+}
+
+export function clientQuestionState(question: QuestionSet): QuestionState {
+  if (question.state === QuestionState.Closed) return QuestionState.Closed;
+
+  const now = Math.round(Date.now() / 1000);
+  if (now < Number(question.startTime)) return QuestionState.Initialized;
+  if (now >= Number(question.endTime)) return QuestionState.Closed;
+  return QuestionState.Open;
 }
 
 export function parseFormDataIntoQuestionData(formData: FormData) {

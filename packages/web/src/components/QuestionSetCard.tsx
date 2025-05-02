@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { type QuestionSet, QuestionState } from "@/types";
-import { analyticContract } from "@/utils";
+import { analyticContract, formatDatetime, clientQuestionState } from "@/utils";
 
 export function QuestionSetCard({ qId }: { qId: number }) {
   const publicClient = usePublicClient();
@@ -19,6 +19,7 @@ export function QuestionSetCard({ qId }: { qId: number }) {
   const [questionSet, setQuestionSet] = useState<QuestionSet>();
   const [ansLen, setAnsLen] = useState<bigint>();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [hasAnswered, setHasAnswered] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -28,30 +29,36 @@ export function QuestionSetCard({ qId }: { qId: number }) {
 
       const address = walletClient.account.address;
 
-      const [_questionSet, _ansLen, _isAdmin] = await Promise.all([
-        publicClient.readContract({
-          ...analyticContract,
-          functionName: "getQuestion",
-          args: [qId],
-        }),
-        publicClient.readContract({
-          ...analyticContract,
-          functionName: "getAnsLen",
-          args: [qId],
-        }),
-        publicClient.readContract({
-          ...analyticContract,
-          functionName: "questionAdmins",
-          args: [qId, address],
-        }),
-      ]);
-
-      console.log("questionSet", _questionSet);
+      const [_questionSet, _ansLen, _isAdmin, _hasAnswered] = await Promise.all(
+        [
+          publicClient.readContract({
+            ...analyticContract,
+            functionName: "getQuestion",
+            args: [qId],
+          }),
+          publicClient.readContract({
+            ...analyticContract,
+            functionName: "getAnsLen",
+            args: [qId],
+          }),
+          publicClient.readContract({
+            ...analyticContract,
+            functionName: "questionAdmins",
+            args: [qId, address],
+          }),
+          publicClient.readContract({
+            ...analyticContract,
+            functionName: "hasAnswered",
+            args: [qId, address],
+          }),
+        ]
+      );
 
       if (isMounted) {
         setQuestionSet(_questionSet as QuestionSet);
         setAnsLen(_ansLen as bigint);
         setIsAdmin(_isAdmin as boolean);
+        setHasAnswered(_hasAnswered as boolean);
       }
     })();
 
@@ -62,6 +69,8 @@ export function QuestionSetCard({ qId }: { qId: number }) {
 
   if (!questionSet) return <div />;
 
+  const cqs = clientQuestionState(questionSet);
+
   return (
     <Card className="w-[350px]">
       <CardHeader>
@@ -69,24 +78,38 @@ export function QuestionSetCard({ qId }: { qId: number }) {
       </CardHeader>
       <CardContent>
         <div className="text-sm text-gray-600">
-          isAdmin: {isAdmin ? "true" : "false"}
+          isAdmin:&nbsp;
+          <span className="text-gray-800 font-medium">
+            {isAdmin ? "true" : "false"}
+          </span>
         </div>
         <div className="text-sm text-gray-600">answer period:</div>
+        <div className="text-sm text-gray-800 ml-4 font-medium">
+          <span>{formatDatetime(Number(questionSet.startTime))}</span>
+          <span> - </span>
+          <span>{formatDatetime(Number(questionSet.endTime))}</span>
+        </div>
         <div className="text-sm text-gray-500">
-          state:
-          <span className="text-gray-800">
-            {QuestionState[Number(questionSet.state)]}
+          state:&nbsp;
+          <span className="text-gray-800 font-medium">
+            {QuestionState[cqs]}
           </span>
         </div>
         <div className="text-sm text-gray-600">
-          answers: <strong>{ansLen}</strong> /{" "}
-          <strong>{questionSet.queryThreshold}</strong>
+          answers:&nbsp;
+          <span className="text-gray-800 font-medium">{ansLen}</span>
+          <span> / </span>
+          <span className="text-gray-800 font-medium">
+            {questionSet.queryThreshold}
+          </span>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline">Answer</Button>
-        <Button variant="outline">Close</Button>
-        <Button variant="outline">Query</Button>
+      <CardFooter className="flex justify-between items-center justify-center gap-x-4">
+        {!hasAnswered && cqs !== QuestionState.Closed && (
+          <Button variant="outline">Answer</Button>
+        )}
+        {isAdmin && <Button variant="outline">Close</Button>}
+        {isAdmin && <Button variant="outline">Query</Button>}
       </CardFooter>
     </Card>
   );

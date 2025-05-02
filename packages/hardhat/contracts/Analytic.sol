@@ -28,28 +28,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     uint64 public nextQueryRequestId = 0;
     mapping(uint64 => QueryRequest) public queryRequests;
 
-    // --- viewer ---
-    function getQuestion(uint64 qId) public view returns (Question memory) {
-        if (qId >= nextQuestionId) revert InvalidQuestion(qId);
-        return questions[qId];
-    }
-
-    function getAnsLen(uint64 qId) public view returns (uint256) {
-        if (qId >= nextQuestionId) revert InvalidQuestion(qId);
-        Answer[] memory answers = questionAnswers[qId];
-        return answers.length;
-    }
-
-    function getQueryResult(
-        uint64 reqId
-    ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
-        // require the query request state to be completed
-        QueryRequest storage req = queryRequests[reqId];
-        if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
-
-        return QueryResult({ acc: req.acc, filteredAnsCount: req.ansCount, ttlAnsCount: req.accSteps });
-    }
-
     // --- modifier ---
     modifier questionValidAndOpen(uint64 qId) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
@@ -77,6 +55,28 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         QueryRequest storage req = queryRequests[qId];
         if (sender != req.owner) revert NotQueryOwner(qId);
         _;
+    }
+
+    // --- viewer ---
+    function getQuestion(uint64 qId) public view returns (Question memory) {
+        if (qId >= nextQuestionId) revert InvalidQuestion(qId);
+        return questions[qId];
+    }
+
+    function getAnsLen(uint64 qId) public view returns (uint256) {
+        if (qId >= nextQuestionId) revert InvalidQuestion(qId);
+        Answer[] memory answers = questionAnswers[qId];
+        return answers.length;
+    }
+
+    function getQueryResult(
+        uint64 reqId
+    ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
+        // require the query request state to be completed
+        QueryRequest storage req = queryRequests[reqId];
+        if (req.state != RequestState.Completed) revert QueryNotCompleted(reqId);
+
+        return QueryResult({ acc: req.acc, filteredAnsCount: req.ansCount, ttlAnsCount: req.accSteps });
     }
 
     // --- write function ---
@@ -107,6 +107,11 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         nextQuestionId += 1;
 
         emit QuestionCreated(msg.sender, qId, _startTime, _endTime);
+    }
+
+    function closeQuestion(uint64 qId) public isQuestionAdmin(qId, msg.sender) {
+        Question storage question = questions[qId];
+        question.state = QuestionState.Closed;
     }
 
     function answer(
