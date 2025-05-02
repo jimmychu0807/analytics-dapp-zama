@@ -1,13 +1,12 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
-import { cookieToInitialState } from "wagmi";
-
-import { getConfig } from "@/utils";
+import "./globals.css";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "@/components/ui/sonner";
-import "./globals.css";
+import { getConfig } from "@/utils";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
+import { cookieToInitialState } from "wagmi";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,20 +29,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialState = cookieToInitialState(
-    getConfig(),
-    (await headers()).get("cookie")
-  );
+  const initialState = cookieToInitialState(getConfig(), (await headers()).get("cookie"));
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers initialState={initialState}>
           <div className="flex flex-col items-center justify-center min-h-screen md:px-[0] font-[family-name:var(--font-geist-sans)]">
             <Header />
-            <main className="flex-auto w-full mt-8">{children}</main>
+            <main className="flex-auto w-full">{children}</main>
             <footer className="h-20 flex flex-row items-center">Footer</footer>
           </div>
           <Toaster richColors closeButton={true} />

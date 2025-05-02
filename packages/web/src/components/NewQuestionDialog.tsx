@@ -1,10 +1,8 @@
 "use client";
-import {
-  type FormEvent,
-  type MouseEvent,
-  type ChangeEvent,
-  useState,
-} from "react";
+
+import { Button } from "@/components/ui/button";
+import { MAX_METAS, parseFormDataIntoQuestionData } from "@/utils";
+import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import {
   Dialog,
   DialogPanel,
@@ -18,25 +16,21 @@ import {
   Select,
 } from "@headlessui/react";
 import { ChevronDownIcon, PlusIcon } from "@heroicons/react/20/solid";
-import { MessageCircleQuestion } from "lucide-react";
-import { usePublicClient, useWalletClient } from "wagmi";
-
 import clsx from "clsx";
-import { Button } from "@/components/ui/button";
-
-import { MAX_METAS, parseFormDataIntoQuestionData } from "@/utils";
-import { submitNewQuestionTx } from "@/utils/chainInteractions";
+import { MessageCircleQuestion } from "lucide-react";
+import { type FormEvent, type MouseEvent, type ChangeEvent, useState } from "react";
+import { usePublicClient, useWalletClient } from "wagmi";
 
 // Styles
 const labelClasses = "text-sm/6 font-medium text-black text-right";
 const textInputClasses = clsx(
   "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-  "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25"
+  "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
 );
 const selectInputClasses = clsx(
   "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
   "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
-  "*:text-black"
+  "*:text-black",
 );
 
 export function NewQuestionDialog() {
@@ -71,15 +65,15 @@ export function NewQuestionDialog() {
     const { main, metas, startTime, endTime, queryThreshold } = questionObj;
 
     try {
-      const receipt = await submitNewQuestionTx(publicClient, walletClient, {
+      const receipt = await sendAnalyticTransaction(publicClient, walletClient, "newQuestion", [
         main,
         metas,
         startTime,
         endTime,
         queryThreshold,
-      });
+      ]);
 
-      console.log("submitNewQuestion", receipt);
+      console.log("newQuestion", receipt);
 
       // Close only when the above ops succeeed
       setMetaNum(0);
@@ -105,9 +99,7 @@ export function NewQuestionDialog() {
         <DialogBackdrop className="fixed inset-0 bg-black/30" />
         <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
           <DialogPanel className="max-w-lg w-1/2 max-h-4/5 overflow-y-auto space-y-4 border bg-white p-6 rounded-lg shadow-xl">
-            <DialogTitle className="font-bold text-center">
-              New Question
-            </DialogTitle>
+            <DialogTitle className="font-bold text-center">New Question</DialogTitle>
 
             <form onSubmit={submitNewQuestion}>
               <QuestionSpec legendName="Main Question" prefix="main" />
@@ -153,15 +145,8 @@ export function NewQuestionDialog() {
               </Field>
 
               <div>
-                <span className="text-sm font-semibold px-4">
-                  Meta Information ({metaNum}/4)
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={incMeta}
-                  className="mt-2"
-                >
+                <span className="text-sm font-semibold px-4">Meta Information ({metaNum}/4)</span>
+                <Button variant="outline" size="icon" onClick={incMeta} className="mt-2">
                   <PlusIcon />
                 </Button>
               </div>
@@ -174,11 +159,7 @@ export function NewQuestionDialog() {
               ))}
 
               <div className="flex gap-4 items-center justify-center py-4">
-                <Button
-                  disabled={isLoading}
-                  variant="outline"
-                  onClick={closeDialog}
-                >
+                <Button disabled={isLoading} variant="outline" onClick={closeDialog}>
                   Cancel
                 </Button>
                 <Button isLoading={isLoading} type="submit">
@@ -193,13 +174,7 @@ export function NewQuestionDialog() {
   );
 }
 
-function QuestionSpec({
-  legendName,
-  prefix,
-}: {
-  legendName: string;
-  prefix: string;
-}) {
+function QuestionSpec({ legendName, prefix }: { legendName: string; prefix: string }) {
   const [qsType, setQsType] = useState<string>("count");
   const [optNum, setOptNum] = useState<number>(2);
 
@@ -235,11 +210,7 @@ function QuestionSpec({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className={labelClasses}>Type</Label>
             <div className="relative col-span-3">
-              <Select
-                onChange={typeChange}
-                name={`${prefix}-type`}
-                className={selectInputClasses}
-              >
+              <Select onChange={typeChange} name={`${prefix}-type`} className={selectInputClasses}>
                 <option value="count">Count</option>
                 <option value="value">Value</option>
               </Select>
@@ -256,23 +227,13 @@ function QuestionSpec({
             <Field className="col-span-2">
               <div className="grid grid-cols-2 items-center gap-4">
                 <Label className={labelClasses}>Min</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  name={`${prefix}-min`}
-                  className={textInputClasses}
-                />
+                <Input type="number" min={0} name={`${prefix}-min`} className={textInputClasses} />
               </div>
             </Field>
             <Field className="col-start-3 col-span-2">
               <div className="grid grid-cols-2 items-center gap-4">
                 <Label className={labelClasses}>Max</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  name={`${prefix}-max`}
-                  className={textInputClasses}
-                />
+                <Input type="number" min={0} name={`${prefix}-max`} className={textInputClasses} />
               </div>
             </Field>
           </div>
@@ -280,21 +241,13 @@ function QuestionSpec({
           <>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className={labelClasses}>Options</Label>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={incOpt}
-                className="mt-2"
-              >
+              <Button variant="outline" size="icon" onClick={incOpt} className="mt-2">
                 <PlusIcon />
               </Button>
             </div>
 
             {[...Array(optNum).keys()].map((idx) => (
-              <div
-                key={`${prefix}-option-${idx}`}
-                className="grid grid-cols-4 items-center gap-4"
-              >
+              <div key={`${prefix}-option-${idx}`} className="grid grid-cols-4 items-center gap-4">
                 <Input
                   name={`${prefix}-option-${idx}`}
                   className={clsx(textInputClasses, "col-start-2 col-span-3")}

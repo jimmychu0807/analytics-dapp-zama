@@ -1,10 +1,10 @@
 "use client";
-import { useReadContract } from "wagmi";
 
-import { WalletConnect } from "@/components/WalletConnect";
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { QuestionSetCard } from "@/components/QuestionSetCard";
+import { WalletConnect } from "@/components/WalletConnect";
 import { analyticContract, REQUIRED_CHAIN_ID } from "@/utils";
+import { useReadContract } from "wagmi";
 
 export default function Home() {
   const { data: nextQuestionId, isSuccess } = useReadContract({

@@ -1,17 +1,12 @@
-import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
-import { http, cookieStorage, createConfig, createStorage } from "wagmi";
-import { sepolia, localhost } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
-import { DateTime } from "luxon";
-
 // TODO: fix this so it works for reading on different chains
 import deployment from "@/deployment/localhost.json";
-import {
-  QuestionType,
-  QuestionState,
-  type QuestionSpec,
-  type QuestionSet,
-} from "../types";
+import { DateTime } from "luxon";
+import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
+import { cookieStorage, createConfig, createStorage, http } from "wagmi";
+import { localhost, sepolia } from "wagmi/chains";
+import { injected } from "wagmi/connectors";
+
+import { type QuestionSet, type QuestionSpec, QuestionState, QuestionType } from "../types";
 
 export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
@@ -121,10 +116,8 @@ export function parseFormDataIntoQuestionData(formData: FormData) {
     }
   }
 
-  const startTime =
-    Date.parse((formData.get("start-datetime") ?? "") as string) / 1000;
-  const endTime =
-    Date.parse((formData.get("end-datetime") ?? "") as string) / 1000;
+  const startTime = Date.parse((formData.get("start-datetime") ?? "") as string) / 1000;
+  const endTime = Date.parse((formData.get("end-datetime") ?? "") as string) / 1000;
   const queryThreshold = Number(formData.get("query-threshold"));
 
   return {
