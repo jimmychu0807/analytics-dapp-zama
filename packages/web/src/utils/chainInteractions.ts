@@ -1,34 +1,22 @@
-import {
-  type PublicClient,
-  type TransactionReceipt,
-  type WalletClient,
-} from "viem";
-
-import { type QuestionSpec } from "@/types";
 import { analyticContract } from "@/utils";
+import { type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
 
-export async function submitNewQuestionTx(
+export async function sendAnalyticTransaction(
   publicClient: PublicClient,
   walletClient: WalletClient,
-  qObj: {
-    main: QuestionSpec;
-    metas: QuestionSpec[];
-    startTime: number;
-    endTime: number;
-    queryThreshold: number;
-  }
+  functionName: string,
+  params: Array<unknown>,
 ): Promise<TransactionReceipt> {
-  // simulate the tx to confirm it works first
   const { account } = walletClient;
   const { address, abi } = analyticContract;
-  const { main, metas, startTime, endTime, queryThreshold } = qObj;
 
+  // simulate the tx to confirm it works first
   const { request } = await publicClient.simulateContract({
     account,
     address,
     abi,
-    functionName: "newQuestion",
-    args: [main, metas, startTime, endTime, queryThreshold],
+    functionName,
+    args: [...params],
   });
   const hash = await walletClient.writeContract(request);
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
