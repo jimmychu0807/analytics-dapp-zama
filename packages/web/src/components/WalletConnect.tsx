@@ -43,7 +43,7 @@ export function WalletConnect({
             <div className="flex flex-row gap-x-4 justify-center">
               {walletAccount.chainId !== requiredChainId && (
                 <FatButton
-                  buttonText="Swtich Network"
+                  buttonText="Switch Network"
                   onClick={() => switchChain({ chainId: requiredChainId })}
                 />
               )}

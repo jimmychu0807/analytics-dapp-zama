@@ -1,33 +1,39 @@
-import { type Address, formatEther as viemFormatEther } from "viem";
+import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
 import { http, cookieStorage, createConfig, createStorage } from "wagmi";
-import { sepolia, baseSepolia, localhost } from "wagmi/chains";
+import { sepolia, localhost } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
+import { DateTime } from "luxon";
 
 // TODO: fix this so it works for reading on different chains
 import deployment from "@/deployment/localhost.json";
-import { QuestionType, type QuestionSpec } from "../types";
+import {
+  QuestionType,
+  QuestionState,
+  type QuestionSpec,
+  type QuestionSet,
+} from "../types";
 
 export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
 
 // TODO: fix this for sepolia
-export const REQUIRED_CHAIN_ID = localhost.id;
+export const REQUIRED_CHAIN_ID = Number(deployment.chainId);
 export const DEPLOYMENT = process.env.NEXT_PUBLIC_DEPLOYMENT;
 
 const { contracts } = deployment;
-export const QuestionSpecLib = {
+export const questionSpecLib = {
   address: contracts.QuestionSpecLib.address as Address,
-  abi: contracts.QuestionSpecLib.abi,
-};
+  abi: contracts.QuestionSpecLib.abi as Abi,
+} as const;
 
-export const AnalyticContract = {
+export const analyticContract = {
   address: contracts.Analytic.address as Address,
-  abi: contracts.Analytic.abi,
-};
+  abi: contracts.Analytic.abi as Abi,
+} as const;
 
 export function getConfig() {
   return createConfig({
-    chains: [localhost, sepolia, baseSepolia],
+    chains: [localhost, sepolia],
     connectors: [injected()],
     storage: createStorage({
       storage: cookieStorage,
@@ -36,13 +42,26 @@ export function getConfig() {
     transports: {
       [localhost.id]: http(ethRpcUrl),
       [sepolia.id]: http(ethRpcUrl),
-      [baseSepolia.id]: http(ethRpcUrl),
     },
   });
 }
 
 export function formatEther(value: bigint, decimal: number = 3): string {
   return Number(viemFormatEther(value)).toFixed(decimal).toString();
+}
+
+export function formatDatetime(timestamp: number): string {
+  const dt = DateTime.fromMillis(timestamp * 1000);
+  return dt.toFormat("yyyy-MM-dd hh:mm");
+}
+
+export function clientQuestionState(question: QuestionSet): QuestionState {
+  if (question.state === QuestionState.Closed) return QuestionState.Closed;
+
+  const now = Math.round(Date.now() / 1000);
+  if (now < Number(question.startTime)) return QuestionState.Initialized;
+  if (now >= Number(question.endTime)) return QuestionState.Closed;
+  return QuestionState.Open;
 }
 
 export function parseFormDataIntoQuestionData(formData: FormData) {

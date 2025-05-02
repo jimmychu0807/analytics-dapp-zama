@@ -5,7 +5,7 @@ import {
 } from "viem";
 
 import { type QuestionSpec } from "@/types";
-import { AnalyticContract } from "@/utils";
+import { analyticContract } from "@/utils";
 
 export async function submitNewQuestionTx(
   publicClient: PublicClient,
@@ -20,7 +20,7 @@ export async function submitNewQuestionTx(
 ): Promise<TransactionReceipt> {
   // simulate the tx to confirm it works first
   const { account } = walletClient;
-  const { address, abi } = AnalyticContract;
+  const { address, abi } = analyticContract;
   const { main, metas, startTime, endTime, queryThreshold } = qObj;
 
   const { request } = await publicClient.simulateContract({
