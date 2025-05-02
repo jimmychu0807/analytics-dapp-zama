@@ -47,6 +47,11 @@ export function NewQuestionDialog() {
     }
   };
 
+  const closeBtnClicked = (ev: MouseEvent<HTMLElement>) => {
+    ev.preventDefault();
+    closeDialog();
+  };
+
   const closeDialog = () => {
     setMetaNum(0);
     setDialogOpen(false);
@@ -159,7 +164,7 @@ export function NewQuestionDialog() {
               ))}
 
               <div className="flex gap-4 items-center justify-center py-4">
-                <Button disabled={isLoading} variant="outline" onClick={closeDialog}>
+                <Button disabled={isLoading} variant="outline" onClick={closeBtnClicked}>
                   Cancel
                 </Button>
                 <Button isLoading={isLoading} type="submit">

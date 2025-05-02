@@ -1,3 +1,4 @@
+import { AnswerQuestionDialog } from "@/components/AnswerQuestionDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { type QuestionSet, QuestionState } from "@/types";
@@ -103,7 +104,9 @@ export function QuestionSetCard({ qId }: { qId: number }) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center justify-center gap-x-4">
-        {!hasAnswered && cqs !== QuestionState.Closed && <Button variant="outline">Answer</Button>}
+        {!hasAnswered && cqs !== QuestionState.Closed && (
+          <AnswerQuestionDialog qId={qId} questionSet={questionSet} />
+        )}
         {isAdmin && questionSet.state !== QuestionState.Closed && (
           <Button variant="outline" onClick={closeQuestion}>
             Close
