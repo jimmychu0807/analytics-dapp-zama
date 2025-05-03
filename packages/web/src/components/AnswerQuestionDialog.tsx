@@ -1,27 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { type QuestionSpec, type QuestionSet, QuestionType, QuestionState } from "@/types";
+import { type QuestionSpec, type QuestionSet, QuestionType } from "@/types";
 import {
   Dialog,
   DialogPanel,
-  DialogTitle,
   DialogBackdrop,
   Field,
-  Fieldset,
   Description,
-  Radio,
   RadioGroup,
   Label,
   Input,
-  Select,
 } from "@headlessui/react";
 import clsx from "clsx";
 import { type MouseEvent, type FormEvent, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
 
 // Styles
-const labelClasses = "text-sm/6 font-medium text-black text-right";
+const labelClasses = "text-sm/6 font-medium text-black";
 const textInputClasses = clsx(
   "block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
   "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
@@ -47,7 +43,7 @@ export function AnswerQuestionDialog({
   const submitAnswerQuestion = async (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
 
-    console.log("submitAnswerQuestion");
+    console.log(`submitAnswerQuestion-${qId}`);
 
     const formData = new FormData(ev.target as HTMLFormElement);
     // TODO: perform data validation on formData
@@ -117,7 +113,7 @@ function AnswerSpec({ questionSpec, name }: { questionSpec: QuestionSpec; name: 
             {questionSpec.options.map((option, idx) => (
               <Field key={`opt-${idx}`} className="flex items-center gap-2">
                 <Input type="radio" name={name} value={idx} />
-                <Label className="text-sm text-black">{option}</Label>
+                <Label className={labelClasses}>{option}</Label>
               </Field>
             ))}
           </RadioGroup>
