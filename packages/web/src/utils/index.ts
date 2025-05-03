@@ -47,7 +47,7 @@ export function formatEther(value: bigint, decimal: number = 3): string {
 
 export function formatDatetime(timestamp: number): string {
   const dt = DateTime.fromMillis(timestamp * 1000);
-  return dt.toFormat("yyyy-MM-dd hh:mm");
+  return dt.toFormat("yyyy-MM-dd HH:mm");
 }
 
 export function clientQuestionState(question: QuestionSet): QuestionState {
