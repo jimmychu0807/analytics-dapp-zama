@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-toolbox";
+import { spawn } from "child_process";
 import dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-ignore-warnings";
@@ -28,6 +29,9 @@ const chainIds = {
   local: 9000,
   localCoprocessor: 12345,
   sepolia: 11155111,
+  // To make metamask compatible with hardhat node
+  // ref: https://hardhat.org/hardhat-network/docs/metamask-issue
+  hardhat: 31337,
 };
 
 function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
@@ -74,6 +78,19 @@ task("test", async (_taskArgs, hre, runSuper) => {
   await runSuper();
 });
 
+task("node", async (_taskArgs, hre, runSuper) => {
+  await setCodeMocked(hre);
+  const server = spawn("ts-node", ["--transpile-only", "mockedServices/server.ts"], {
+    stdio: "inherit",
+  });
+
+  process.on("SIGINT", () => {
+    server.kill();
+    process.exit(0);
+  });
+  await runSuper();
+});
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   namedAccounts: {
@@ -90,16 +107,14 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      // To make metamask compatible with hardhat node
-      // ref: https://hardhat.org/hardhat-network/docs/metamask-issue
-      chainId: 1337,
       accounts: {
         count: 50,
         // Using default hardhat mnemonic
         // ref: https://hardhat.org/hardhat-network/docs/reference#accounts
-        mnemonic: "test test test test test test test test test test test junk",
+        mnemonic,
         path: "m/44'/60'/0'/0",
       },
+      chainId: chainIds["hardhat"],
     },
     sepolia: getChainConfig("sepolia"),
     zama: getChainConfig("zama"),

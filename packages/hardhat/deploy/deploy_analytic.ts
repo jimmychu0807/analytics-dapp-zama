@@ -20,8 +20,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  console.log(`lib address: ${lib.address}`);
-  console.log(`analyticContract address: ${analyticContract.address}`);
+  console.log(`QuestionSpecLib contract address: ${lib.address}`);
+  console.log(`Analytic contract address:        ${analyticContract.address}`);
 };
 
 export default func;

@@ -1,7 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useFhevm } from "@/contexts/FhevmContext";
 import { type QuestionSpec, type QuestionSet, QuestionType } from "@/types";
+import { parseFormDataIntoAnswerData } from "@/utils";
+import { submitAnswerTx } from "@/utils/chainInteractions";
 import {
   Dialog,
   DialogPanel,
@@ -30,34 +33,36 @@ export function AnswerQuestionDialog({
   qId: number;
   questionSet: QuestionSet;
 }) {
-  const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [isLoading, setLoading] = useState<boolean>(false);
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const fhevm = useFhevm();
+
+  const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [isLoading, setLoading] = useState<boolean>(false);
 
   const closeBtnClicked = (ev: MouseEvent<HTMLElement>) => {
     ev.preventDefault();
     setDialogOpen(false);
   };
 
-  const submitAnswerQuestion = async (ev: FormEvent<HTMLFormElement>) => {
+  const submitAnswer = async (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
-
-    console.log(`submitAnswerQuestion-${qId}`);
-
     const formData = new FormData(ev.target as HTMLFormElement);
-    // TODO: perform data validation on formData
 
-    if (!publicClient || !walletClient) return;
+    if (!publicClient || !walletClient || !fhevm) return;
 
     setLoading(true);
+    try {
+      const ansObj = parseFormDataIntoAnswerData(formData);
+      const receipt = await submitAnswerTx(publicClient, walletClient, fhevm, qId, ansObj);
+      console.log("subAnswerQuestion receipt:", receipt);
 
-    for (const [name, val] of formData.entries()) {
-      console.log(`${name}: ${val}`);
+      setDialogOpen(false);
+    } catch (err) {
+      console.error("Error on submitAnswer:", (err as Error).message);
     }
 
     setLoading(false);
-    setDialogOpen(false);
   };
 
   return (
@@ -74,7 +79,7 @@ export function AnswerQuestionDialog({
         <DialogBackdrop className="fixed inset-0 bg-black/30" />
         <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
           <DialogPanel className="max-w-lg w-1/2 max-h-4/5 overflow-y-auto space-y-4 border bg-white p-6 rounded-lg shadow-xl">
-            <form onSubmit={submitAnswerQuestion}>
+            <form onSubmit={submitAnswer}>
               <AnswerSpec questionSpec={questionSet.main} name="main" />
 
               {questionSet.metas.length > 0 && (
@@ -112,7 +117,7 @@ function AnswerSpec({ questionSpec, name }: { questionSpec: QuestionSpec; name: 
           <RadioGroup className="space-y-2">
             {questionSpec.options.map((option, idx) => (
               <Field key={`opt-${idx}`} className="flex items-center gap-2">
-                <Input type="radio" name={name} value={idx} />
+                <Input type="radio" required name={name} value={idx} />
                 <Label className={labelClasses}>{option}</Label>
               </Field>
             ))}

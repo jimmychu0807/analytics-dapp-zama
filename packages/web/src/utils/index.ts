@@ -1,41 +1,38 @@
 // TODO: fix this so it works for reading on different chains
-import deployment from "@/deployment/localhost.json";
-import { DateTime } from "luxon";
-import { type Abi, type Address, formatEther as viemFormatEther } from "viem";
-import { cookieStorage, createConfig, createStorage, http } from "wagmi";
-import { localhost, sepolia } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
-
 import { type QuestionSet, type QuestionSpec, QuestionState, QuestionType } from "../types";
+import { questionSpecLibABI, analyticABI } from "@/abi";
+import { DateTime } from "luxon";
+import { type Address, formatEther as viemFormatEther } from "viem";
+import { cookieStorage, createConfig, createStorage, http } from "wagmi";
+import { hardhat, sepolia } from "wagmi/chains";
+import { injected } from "wagmi/connectors";
 
 export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
 
-// TODO: fix this for sepolia
-export const REQUIRED_CHAIN_ID = Number(deployment.chainId);
-export const DEPLOYMENT = process.env.NEXT_PUBLIC_DEPLOYMENT;
+export const REQUIRED_CHAIN_ID =
+  process.env.NEXT_PUBLIC_MOCKED_HARDHAT === "true" ? hardhat.id : sepolia.id;
 
-const { contracts } = deployment;
 export const questionSpecLib = {
-  address: contracts.QuestionSpecLib.address as Address,
-  abi: contracts.QuestionSpecLib.abi as Abi,
+  address: (process.env.NEXT_PUBLIC_QUESTIONSPECLIB_ADDRESS ?? "0x") as Address,
+  abi: questionSpecLibABI,
 } as const;
 
 export const analyticContract = {
-  address: contracts.Analytic.address as Address,
-  abi: contracts.Analytic.abi as Abi,
+  address: (process.env.NEXT_PUBLIC_ANALYTIC_ADDRESS ?? "0x") as Address,
+  abi: analyticABI,
 } as const;
 
 export function getConfig() {
   return createConfig({
-    chains: [localhost, sepolia],
+    chains: [hardhat, sepolia],
     connectors: [injected()],
     storage: createStorage({
       storage: cookieStorage,
     }),
     ssr: true,
     transports: {
-      [localhost.id]: http(ethRpcUrl),
+      [hardhat.id]: http(ethRpcUrl),
       [sepolia.id]: http(ethRpcUrl),
     },
   });
@@ -57,6 +54,23 @@ export function clientQuestionState(question: QuestionSet): QuestionState {
   if (now < Number(question.startTime)) return QuestionState.Initialized;
   if (now >= Number(question.endTime)) return QuestionState.Closed;
   return QuestionState.Open;
+}
+
+export function parseFormDataIntoAnswerData(formData: FormData) {
+  const metaAns = [] as Array<number>;
+  let ans: number | undefined = undefined;
+
+  for (const [name, val] of formData.entries()) {
+    if (name === "main") {
+      ans = Number(val);
+    } else if (name.startsWith("meta")) {
+      metaAns.push(Number(val));
+    }
+  }
+
+  if (ans === undefined) throw new Error("main answer does not exist!");
+
+  return { ans, metaAns };
 }
 
 export function parseFormDataIntoQuestionData(formData: FormData) {

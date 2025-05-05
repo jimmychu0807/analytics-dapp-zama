@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3010",
     "build": "next build",
     "start": "next start",
     "lint": "pnpm compile && next lint --dir ./src && pnpm prettier",
@@ -29,6 +29,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",
     "viem": "2.x",
+    "fhevmjs": "catalog:",
     "wagmi": "^2.14.16"
   },
   "devDependencies": {
