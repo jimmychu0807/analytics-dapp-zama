@@ -2,6 +2,8 @@
 
 import { initFhevm, createInstance, type FhevmInstance } from "fhevmjs/bundle";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
+import { mockedHardhat, fhevmConfig } from "@/utils";
+import { getMockedFhevm } from "@/utils/fhevmjsMocked";
 
 export const FhevmContext = createContext<FhevmInstance | undefined>(undefined);
 
@@ -15,13 +17,17 @@ export function FhevmProvider({ children }: { children: ReactNode }) {
       //   - mocked frontend: https://github.com/zama-ai/fhevm-react-template/blob/mockedFrontend
       await initFhevm();
 
-      const _instance = await createInstance({
-        kmsContractAddress: "0x9D6891A6240D6130c54ae243d8005063D05fE14b",
-        aclContractAddress: "0xFee8407e2f5e3Ee68ad77cAE98c434e637f516e5",
-        // TODO: is this right?
-        network: window.ethereum,
-        gatewayUrl: "https://gateway.sepolia.zama.ai/",
-      });
+      const { kmsContractAddress, aclContractAddress, gatewayUrl } = fhevmConfig;
+
+      const _instance = mockedHardhat
+        ? getMockedFhevm()
+        : await createInstance({
+            kmsContractAddress,
+            aclContractAddress,
+            // TODO: is this right?
+            network: window.ethereum,
+            gatewayUrl,
+          });
 
       setInstance(_instance);
     })();

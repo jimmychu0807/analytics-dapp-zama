@@ -9,9 +9,14 @@ import { injected } from "wagmi/connectors";
 
 export const MAX_METAS = 4;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
+export const mockedHardhat = process.env.NEXT_PUBLIC_MOCKED_HARDHAT === "true";
 
-export const REQUIRED_CHAIN_ID =
-  process.env.NEXT_PUBLIC_MOCKED_HARDHAT === "true" ? hardhat.id : sepolia.id;
+export const requiredChainId = mockedHardhat ? hardhat.id : sepolia.id;
+export const fhevmConfig = {
+  kmsContractAddress: "0x9D6891A6240D6130c54ae243d8005063D05fE14b",
+  aclContractAddress: "0xFee8407e2f5e3Ee68ad77cAE98c434e637f516e5",
+  gatewayUrl: "https://gateway.sepolia.zama.ai/",
+};
 
 export const questionSpecLib = {
   address: (process.env.NEXT_PUBLIC_QUESTIONSPECLIB_ADDRESS ?? "0x") as Address,
@@ -81,36 +86,40 @@ export function parseFormDataIntoQuestionData(formData: FormData) {
     const hyphenPos = name.indexOf("-");
     if (hyphenPos < 0) continue;
 
+    // remove empty string
+    const valStr = (val as string).trim();
+    if (valStr.length === 0) continue;
+
     const prefix = name.slice(0, hyphenPos);
     const suffix = name.slice(hyphenPos + 1);
 
     if (suffix === "qText") {
       questionSpecs[prefix] = {
         ...questionSpecs[prefix],
-        text: val as string,
+        text: valStr,
       };
     } else if (suffix === "type") {
       questionSpecs[prefix] = {
         ...questionSpecs[prefix],
-        t: val === "count" ? QuestionType.Option : QuestionType.Value,
+        t: valStr === "option" ? QuestionType.Option : QuestionType.Value,
       };
     } else if (suffix === "min") {
       questionSpecs[prefix] = {
         ...questionSpecs[prefix],
-        min: Number(val),
+        min: Number(valStr),
       };
     } else if (suffix === "max") {
       questionSpecs[prefix] = {
         ...questionSpecs[prefix],
-        max: Number(val),
+        max: Number(valStr),
       };
     } else if (suffix.startsWith("option")) {
       questionSpecs[prefix] = {
         ...questionSpecs[prefix],
         options:
           questionSpecs[prefix].options !== undefined
-            ? [...questionSpecs[prefix].options, val as string]
-            : [val as string],
+            ? [...questionSpecs[prefix].options, valStr as string]
+            : [valStr as string],
       };
     }
   }

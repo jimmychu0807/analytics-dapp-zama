@@ -55,7 +55,7 @@ export function AnswerQuestionDialog({
     try {
       const ansObj = parseFormDataIntoAnswerData(formData);
       const receipt = await submitAnswerTx(publicClient, walletClient, fhevm, qId, ansObj);
-      console.log("subAnswerQuestion receipt:", receipt);
+      console.log("submitAnswer receipt:", receipt);
 
       setDialogOpen(false);
     } catch (err) {

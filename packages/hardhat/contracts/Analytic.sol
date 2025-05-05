@@ -7,7 +7,7 @@ import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IAnalytic } from "./interfaces/IAnalytic.sol";
 import { QuestionSpecLib } from "./QuestionSpecLib.sol";
-// import { console } from "hardhat/console.sol";
+import { console } from "hardhat/console.sol";
 
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
     // --- library ---
@@ -174,6 +174,10 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     function confirmOrRejectAnswer(uint256 reqId, bool decValid) external onlyGateway {
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
+
+        console.log("qId: %s", qId);
+        console.log("sender: %s", sender);
+        console.log("decValid: %s", decValid);
 
         if (!decValid) revert RejectAnswer(qId, sender);
 

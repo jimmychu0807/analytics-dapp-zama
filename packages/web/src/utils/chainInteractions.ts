@@ -1,4 +1,5 @@
 import { analyticContract } from "@/utils";
+import { toHex } from "viem";
 import { type FhevmInstance } from "fhevmjs/bundle";
 import { type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
 
@@ -11,6 +12,8 @@ export async function sendAnalyticTransaction(
   const { account } = walletClient;
   const { address, abi } = analyticContract;
 
+  console.log("params", params);
+
   // simulate the tx to confirm it works first
   const { request } = await publicClient.simulateContract({
     account,
@@ -19,6 +22,7 @@ export async function sendAnalyticTransaction(
     functionName,
     args: [...params],
   });
+
   const hash = await walletClient.writeContract(request);
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   return receipt;
@@ -34,22 +38,20 @@ export async function submitAnswerTx(
   const { account } = walletClient;
   if (!account) throw new Error("walletClient account does not exist");
 
-  console.log("fhevm", fhevm);
-
   const input = fhevm.createEncryptedInput(analyticContract.address, account.address);
-
-  console.log("completed encrypted input", input);
-
   const { ans, metaAns } = ansObj;
   const inputs = await metaAns.reduce((acc, ma) => acc.add32(ma), input.add32(ans)).encrypt();
 
-  console.log("encrypted inputs:", inputs);
+  const inputHexStr = {
+    handles: inputs.handles.map(h => toHex(h)),
+    inputProof: toHex(inputs.inputProof),
+  };
 
   const receipt = await sendAnalyticTransaction(publicClient, walletClient, "answer", [
     qId,
-    inputs.handles[0],
-    inputs.handles.slice(1),
-    inputs.inputProof,
+    inputHexStr.handles[0],
+    inputHexStr.handles.slice(1),
+    inputHexStr.inputProof,
   ]);
 
   // CHECK: In sepolia network, we don't wait for decryption?

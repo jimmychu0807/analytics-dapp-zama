@@ -62,6 +62,13 @@ app.use(cors());
 app.use(express.json());
 const port = 3000;
 
+app.get("/ping", async (req: Request, res: Response<ApiResponse>) => {
+  res.json({
+    status: "success",
+    message: "pong"
+  });
+});
+
 app.post("/get-clear-text", async (req: Request, res: Response<ApiResponse>) => {
   try {
     const { handle } = req.body;

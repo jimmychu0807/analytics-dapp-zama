@@ -3,7 +3,7 @@
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { QuestionSetCard } from "@/components/QuestionSetCard";
 import { WalletConnect } from "@/components/WalletConnect";
-import { analyticContract, REQUIRED_CHAIN_ID } from "@/utils";
+import { analyticContract, requiredChainId } from "@/utils";
 import { useReadContract } from "wagmi";
 
 export default function Home() {
@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center gap-8">
       <div>
-        <WalletConnect requiredChainId={REQUIRED_CHAIN_ID} />
+        <WalletConnect requiredChainId={requiredChainId} />
       </div>
       <div>
         <NewQuestionDialog />

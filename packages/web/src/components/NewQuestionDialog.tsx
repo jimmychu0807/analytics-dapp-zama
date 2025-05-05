@@ -180,7 +180,7 @@ export function NewQuestionDialog() {
 }
 
 function QuestionSpec({ legendName, prefix }: { legendName: string; prefix: string }) {
-  const [qsType, setQsType] = useState<string>("count");
+  const [qsType, setQsType] = useState<string>("option");
   const [optNum, setOptNum] = useState<number>(2);
 
   const typeChange = (ev: ChangeEvent<HTMLSelectElement>) => {
@@ -216,7 +216,7 @@ function QuestionSpec({ legendName, prefix }: { legendName: string; prefix: stri
             <Label className={labelClasses}>Type</Label>
             <div className="relative col-span-3">
               <Select onChange={typeChange} name={`${prefix}-type`} className={selectInputClasses}>
-                <option value="count">Count</option>
+                <option value="option">Option</option>
                 <option value="value">Value</option>
               </Select>
               <ChevronDownIcon

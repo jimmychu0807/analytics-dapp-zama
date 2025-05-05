@@ -41,6 +41,10 @@ export const initGateway = async (): Promise<void> => {
     console.log(`${await currentTime()} - Requested decrypt (requestID ${requestID}) for handles ${cts}`);
     await fulfillRequest(requestID, cts);
   });
+  gateway.on("ResultCallback", async (requestID, success, result, eventData) => {
+    const blockNumber = eventData.log.blockNumber;
+    console.log(`${await currentTime()} - Fulfilled decrypt on block ${blockNumber} (requestID ${requestID})`);
+  });
 };
 
 const allTrue = (arr: boolean[], fn = Boolean) => arr.every(fn);
