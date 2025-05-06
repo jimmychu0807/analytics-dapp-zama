@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { MAX_METAS, parseFormDataIntoQuestionData } from "@/utils";
+import { maxMetas, parseFormDataIntoQuestionData } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import {
   Dialog,
@@ -42,7 +42,7 @@ export function NewQuestionDialog() {
 
   const incMeta = (ev: MouseEvent<HTMLElement>) => {
     ev.preventDefault();
-    if (metaNum < MAX_METAS) {
+    if (metaNum < maxMetas) {
       setMetaNum((mn) => mn + 1);
     }
   };
@@ -81,8 +81,7 @@ export function NewQuestionDialog() {
       console.log("newQuestion", receipt);
 
       // Close only when the above ops succeeed
-      setMetaNum(0);
-      setDialogOpen(false);
+      closeDialog();
     } catch (err) {
       console.error("Error on submitNewQuestion:", (err as Error).message);
     }

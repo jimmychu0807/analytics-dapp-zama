@@ -7,7 +7,8 @@ import { cookieStorage, createConfig, createStorage, http } from "wagmi";
 import { hardhat, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
-export const MAX_METAS = 4;
+export const maxMetas = 4;
+export const maxPredicates = 3;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
 export const mockedHardhat = process.env.NEXT_PUBLIC_MOCKED_HARDHAT === "true";
 
