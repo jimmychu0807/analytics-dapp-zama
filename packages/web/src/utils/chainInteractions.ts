@@ -1,6 +1,7 @@
 import { analyticContract } from "@/utils";
-import { toHex } from "viem";
+import { type MockedFhevmInstance } from "@/utils/fhevmjsMocked";
 import { type FhevmInstance } from "fhevmjs/bundle";
+import { toHex } from "viem";
 import { type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
 
 export async function sendAnalyticTransaction(
@@ -31,7 +32,7 @@ export async function sendAnalyticTransaction(
 export async function submitAnswerTx(
   publicClient: PublicClient,
   walletClient: WalletClient,
-  fhevm: FhevmInstance,
+  fhevm: FhevmInstance | MockedFhevmInstance,
   qId: number,
   ansObj: { ans: number; metaAns: Array<number> },
 ): Promise<TransactionReceipt> {
@@ -42,8 +43,9 @@ export async function submitAnswerTx(
   const { ans, metaAns } = ansObj;
   const inputs = await metaAns.reduce((acc, ma) => acc.add32(ma), input.add32(ans)).encrypt();
 
+  // converting to hex string
   const inputHexStr = {
-    handles: inputs.handles.map(h => toHex(h)),
+    handles: inputs.handles.map((h) => toHex(h)),
     inputProof: toHex(inputs.inputProof),
   };
 
@@ -54,7 +56,7 @@ export async function submitAnswerTx(
     inputHexStr.inputProof,
   ]);
 
-  // CHECK: In sepolia network, we don't wait for decryption?
+  // CHECK: In sepolia network, should we wait for decryption?
   // await awaitAllDecryptionResults();
 
   return receipt;

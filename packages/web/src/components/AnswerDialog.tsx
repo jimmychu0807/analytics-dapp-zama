@@ -26,13 +26,7 @@ const textInputClasses = clsx(
   "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
 );
 
-export function AnswerQuestionDialog({
-  qId,
-  questionSet,
-}: {
-  qId: number;
-  questionSet: QuestionSet;
-}) {
+export function AnswerDialog({ qId, questionSet }: { qId: number; questionSet: QuestionSet }) {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const fhevm = useFhevm();
