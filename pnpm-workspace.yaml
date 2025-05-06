@@ -8,3 +8,4 @@ catalog:
   typescript: ^5
   wait-on: ^8.0.2
   prettier: ^2.8.4
+  fhevmjs: ^0.6.2

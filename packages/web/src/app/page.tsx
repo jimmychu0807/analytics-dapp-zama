@@ -3,28 +3,35 @@
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { QuestionSetCard } from "@/components/QuestionSetCard";
 import { WalletConnect } from "@/components/WalletConnect";
-import { analyticContract, REQUIRED_CHAIN_ID } from "@/utils";
+import { analyticContract, requiredChainId } from "@/utils";
 import { useReadContract } from "wagmi";
 
 export default function Home() {
-  const { data: nextQuestionId, isSuccess } = useReadContract({
+  const {
+    data: nextQuestionId,
+    isSuccess,
+    error,
+    status,
+  } = useReadContract({
     ...analyticContract,
     functionName: "nextQuestionId",
-    query: { refetchInterval: 10000 },
+    query: { refetchInterval: 6000 },
   });
+
+  if (status === "error") console.error("Read contract error:", error);
 
   return (
     <div className="flex flex-col items-center justify-center gap-8">
       <div>
-        <WalletConnect requiredChainId={REQUIRED_CHAIN_ID} />
+        <WalletConnect requiredChainId={requiredChainId} />
       </div>
       <div>
         <NewQuestionDialog />
       </div>
       {!isSuccess ? (
-        <div>Loading...</div>
-      ) : nextQuestionId === 0 ? (
-        <div>No question. Create a question now 🙋</div>
+        <div className="self-center">Loading...</div>
+      ) : nextQuestionId === BigInt(0) ? (
+        <div className="self-center">No question. Create a question now 🙋</div>
       ) : (
         <div className="self-start px-6 flex gap-8 flex-wrap">
           {[...Array(Number(nextQuestionId)).keys()].map((qId) => (
