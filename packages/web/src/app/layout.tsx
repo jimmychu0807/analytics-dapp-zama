@@ -34,12 +34,6 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <Script
-          src="https://cdn.zama.ai/fhevmjs/0.6.2/fhevmjs.umd.cjs"
-          strategy="beforeInteractive"
-        />
-      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers initialState={initialState}>
           <div className="flex flex-col items-center justify-center min-h-screen md:px-[0] font-[family-name:var(--font-geist-sans)]">
