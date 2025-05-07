@@ -78,7 +78,7 @@ export function NewQuestionDialog() {
         queryThreshold,
       ]);
 
-      console.log("newQuestion", receipt);
+      console.log("submitNewQuestion", receipt);
 
       // Close only when the above ops succeeed
       closeDialog();

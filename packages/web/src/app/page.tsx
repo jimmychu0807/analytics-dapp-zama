@@ -15,7 +15,7 @@ export default function Home() {
   } = useReadContract({
     ...analyticContract,
     functionName: "nextQuestionId",
-    query: { refetchInterval: 6000 },
+    // query: { refetchInterval: 6000 },
   });
 
   if (status === "error") console.error("Read contract error:", error);

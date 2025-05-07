@@ -225,6 +225,10 @@ describe("Analytic", function () {
 
     testEventArgs(this.analyticContract, receipt.logs, "QueryRequestCreated", [0, aliceAddr]);
 
+    // Test the userQueryRequest list should contain one element.
+    const qrList = await this.analyticContract.getUserQueryRequestList(aliceAddr, qId);
+    expect(qrList).to.deep.equal([0]);
+
     // Perform one round of query
     const reqId = 0;
     tx = await this.analyticContract.executeQuery(reqId, ansLen);

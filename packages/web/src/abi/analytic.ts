@@ -563,6 +563,30 @@ export const abi: Abi = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+      {
+        internalType: "uint64",
+        name: "qId",
+        type: "uint64",
+      },
+    ],
+    name: "getUserQueryRequestList",
+    outputs: [
+      {
+        internalType: "uint64[]",
+        name: "",
+        type: "uint64[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "uint64",
         name: "",
         type: "uint64",
@@ -889,6 +913,30 @@ export const abi: Abi = [
       },
     ],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "userQueries",
+    outputs: [
+      {
+        internalType: "uint64",
+        name: "",
+        type: "uint64",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
 ] as const;
