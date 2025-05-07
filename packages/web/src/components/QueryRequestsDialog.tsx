@@ -1,4 +1,5 @@
 import { NewQueryRequestDialog } from "@/components/NewQueryRequestDialog";
+import { QueryResultDialog } from "@/components/QueryResultDialog";
 import { Button } from "@/components/ui/button";
 import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
 import { analyticContract, querySteps } from "@/utils";
@@ -138,9 +139,7 @@ export function QueryRequestsDialog({
                       Process
                     </Button>
                   ) : (
-                    <Button variant="outline" className="min-w-22" onClick={fetchQueryResult}>
-                      View
-                    </Button>
+                    <QueryResultDialog qId={qId} questionSet={questionSet} qrId={qr.id} />
                   )}
                 </div>
               ))}
