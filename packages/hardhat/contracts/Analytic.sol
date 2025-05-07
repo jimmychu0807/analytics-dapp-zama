@@ -27,6 +27,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     uint64 public nextQueryRequestId = 0;
     mapping(uint64 => QueryRequest) public queryRequests;
+    mapping(address => uint64[]) public userQueries;
 
     // --- modifier ---
     modifier questionValidAndOpen(uint64 qId) {
@@ -67,6 +68,30 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         Answer[] memory answers = questionAnswers[qId];
         return answers.length;
+    }
+
+    function getUserQueryRequestList(address user, uint64 qId) public view returns (uint64[] memory) {
+        uint64[] storage queries = userQueries[user];
+
+        uint256 len = 0;
+        for (uint256 i = 0; i < queries.length; i++) {
+            QueryRequest storage qr = queryRequests[queries[i]];
+            if (qr.questionId == qId) len += 1;
+        }
+        uint64[] memory list = new uint64[](len);
+
+        // Early return as the list is going to be empty
+        if (len == 0) return list;
+
+        uint256 idx = 0;
+        for (uint256 i = 0; i < queries.length; i++) {
+            QueryRequest storage qr = queryRequests[queries[i]];
+            if (qr.questionId == qId) {
+                list[idx] = queries[i];
+                idx += 1;
+            }
+        }
+        return list;
     }
 
     function getQueryResult(
@@ -230,6 +255,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         queryRequests[reqId] = queryReq;
         nextQueryRequestId += 1;
+        userQueries[msg.sender].push(reqId);
 
         // granting access
         for (uint256 i = 0; i < queryReq.acc.length; i++) {
@@ -248,6 +274,9 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         QueryRequest storage req = queryRequests[reqId];
         if (req.owner != msg.sender) revert NotQueryOwner(reqId);
         delete queryRequests[reqId];
+
+        // TODO: delete it from userQueries storage
+
         emit QueryRequestDeleted(reqId);
     }
 

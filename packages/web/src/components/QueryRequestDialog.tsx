@@ -1,10 +1,12 @@
 import { NewQueryRequestDialog } from "@/components/NewQueryRequestDialog";
 import { Button } from "@/components/ui/button";
-import { type QuestionSet } from "@/types";
+import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
+import { analyticContract, querySteps } from "@/utils";
+import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
-import { useState } from "react";
-
-// import { usePublicClient, useWalletClient } from "wagmi";
+import { type MouseEvent, useState, useEffect } from "react";
+import { type Address } from "viem";
+import { useAccount, useReadContract, usePublicClient, useWalletClient } from "wagmi";
 
 export function QueryRequestDialog({
   qId,
@@ -14,6 +16,86 @@ export function QueryRequestDialog({
   questionSet: QuestionSet;
 }) {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [isLoading, setLoading] = useState<bigint>();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  const { address } = useAccount();
+  const [queryRequests, setQueryRequests] = useState<Array<QueryRequest>>([]);
+
+  const {
+    data: queryRequestIds,
+    error,
+    status,
+  } = useReadContract({
+    ...analyticContract,
+    functionName: "getUserQueryRequestList",
+    args: [address, qId],
+  });
+
+  if (status === "error") console.error("Read contract error:", error);
+
+  const processQueryRequest = async ({
+    ev,
+    qr,
+  }: {
+    ev: MouseEvent<HTMLElement>;
+    qr: QueryRequest;
+  }) => {
+    ev.preventDefault();
+
+    if (!publicClient || !walletClient) return;
+
+    setLoading(qr.id);
+
+    try {
+      const receipt = await sendAnalyticTransaction(publicClient, walletClient, "executeQuery", [
+        qr.id,
+        querySteps,
+      ]);
+
+      console.log("processQueryRequest", receipt);
+    } catch (err) {
+      console.error("Error on processQueryRequest:", (err as Error).message);
+    }
+    setLoading(undefined);
+  };
+
+  const fetchQueryResult = async (ev: MouseEvent<HTMLElement>) => {
+    ev.preventDefault();
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const castedReqIds = queryRequestIds as unknown as Array<bigint>;
+      if (!castedReqIds || castedReqIds.length === 0 || !publicClient) return;
+
+      const _queryRequests = (await Promise.all(
+        castedReqIds.map((id) =>
+          publicClient.readContract({
+            ...analyticContract,
+            functionName: "queryRequests",
+            args: [id],
+          }),
+        ),
+      )) as Array<[bigint, Address, bigint, number, number]>;
+
+      const processed = _queryRequests.map((qr, idx) => ({
+        id: castedReqIds[idx],
+        qId: qr[0],
+        accSteps: qr[3],
+        state: Number(qr[4]),
+      }));
+
+      if (isMounted) {
+        setQueryRequests(processed);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [publicClient, walletClient, queryRequestIds]);
 
   return (
     <>
@@ -30,8 +112,32 @@ export function QueryRequestDialog({
         <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
           <DialogPanel className="flex flex-col items-center max-w-lg w-1/2 max-h-4/5 overflow-y-auto space-y-4 border bg-white p-6 rounded-lg shadow-xl">
             <DialogTitle className="font-bold text-center">Query Requests</DialogTitle>
-
             <NewQueryRequestDialog qId={qId} questionSet={questionSet} />
+
+            <div className="flex flex-col w-full gap-4">
+              {queryRequests.map((qr) => (
+                <div key={`qr-${qr.id}`} className="flex flex-row justify-between">
+                  <div className="self-center text-sm">
+                    Request #{qr.id}: {RequestState[qr.state]}
+                  </div>
+                  {qr.state !== RequestState.Completed ? (
+                    <Button
+                      variant="outline"
+                      className="w-20"
+                      onClick={(ev: MouseEvent<HTMLElement>) => processQueryRequest({ ev, qr })}
+                      isLoading={isLoading === qr.id}
+                      disabled={isLoading !== undefined}
+                    >
+                      Process
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="w-20" onClick={fetchQueryResult}>
+                      View
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </DialogPanel>
         </div>
       </Dialog>

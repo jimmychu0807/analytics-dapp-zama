@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { type QuestionSpec, type QuestionSet, QuestionType } from "@/types";
-import { maxPredicates } from "@/utils";
+import { maxPredicates, parseFormDataIntoQueryRequestObj } from "@/utils";
+import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop, Select, Input } from "@headlessui/react";
 import { PlusIcon, ChevronDownIcon } from "@heroicons/react/20/solid";
 import clsx from "clsx";
@@ -47,14 +48,19 @@ export function NewQueryRequestDialog({
     if (!publicClient || !walletClient) return;
 
     setLoading(true);
-    console.log(`qId: ${qId}`);
+    const queryRequestObj = parseFormDataIntoQueryRequestObj(formData);
 
-    for (const [key, val] of formData.entries()) {
-      console.log(`${key}: ${val}`);
+    try {
+      const receipt = await sendAnalyticTransaction(publicClient, walletClient, "requestQuery", [
+        qId,
+        queryRequestObj,
+      ]);
+
+      console.log("submitNewQueryRequest", receipt);
+      closeDialog();
+    } catch (err) {
+      console.error("Error on submitNewQueryRequest:", (err as Error).message);
     }
-
-    // closeDialog();
-
     setLoading(false);
   };
 
@@ -131,9 +137,10 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
       <div className="relative">
         <Select
           className={selectInputClasses}
-          name={`${prefix}`}
+          name={`${prefix}-metaOpt`}
           onChange={metaChange}
           defaultValue=""
+          required
         >
           <option value="" hidden></option>
           {questionSet.metas.map((meta, idx) => (
@@ -148,7 +155,7 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
         />
       </div>
       <div className="relative">
-        <Select className={selectInputClasses} name={`${prefix}-action`} defaultValue="">
+        <Select className={selectInputClasses} name={`${prefix}-op`} defaultValue="" required>
           <option value="" hidden></option>
           {compareActions.map((action, idx) => (
             <option key={idx} value={idx}>
@@ -164,7 +171,12 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
       {selectedMeta &&
         (selectedMeta.t === QuestionType.Option ? (
           <div className="relative">
-            <Select className={selectInputClasses} name={`${prefix}-value`} defaultValue="">
+            <Select
+              className={selectInputClasses}
+              name={`${prefix}-metaVal`}
+              defaultValue=""
+              required
+            >
               <option value="" hidden></option>
               {selectedMeta.options.map((opt, idx) => (
                 <option key={idx} value={idx}>
@@ -179,7 +191,8 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
           </div>
         ) : (
           <Input
-            name={`${prefix}-value`}
+            required
+            name={`${prefix}-metaVal`}
             type="number"
             className={textInputClasses}
             placeholder={`${selectedMeta.min} - ${selectedMeta.max}`}

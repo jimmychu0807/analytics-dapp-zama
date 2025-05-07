@@ -1,5 +1,11 @@
 // TODO: fix this so it works for reading on different chains
-import { type QuestionSet, type QuestionSpec, QuestionState, QuestionType } from "../types";
+import {
+  type QuestionSet,
+  type QuestionSpec,
+  type Predicate,
+  QuestionState,
+  QuestionType,
+} from "../types";
 import { questionSpecLibABI, analyticABI } from "@/abi";
 import { DateTime } from "luxon";
 import { type Address, formatEther as viemFormatEther } from "viem";
@@ -9,6 +15,7 @@ import { injected } from "wagmi/connectors";
 
 export const maxMetas = 4;
 export const maxPredicates = 3;
+export const querySteps = 5;
 export const ethRpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL;
 export const mockedHardhat = process.env.NEXT_PUBLIC_MOCKED_HARDHAT === "true";
 
@@ -77,6 +84,21 @@ export function parseFormDataIntoAnswerData(formData: FormData) {
   if (ans === undefined) throw new Error("main answer does not exist!");
 
   return { ans, metaAns };
+}
+
+export function parseFormDataIntoQueryRequestObj(formData: FormData) {
+  const predicates: Array<Record<string, number>> = [];
+  for (const [key, val] of formData.entries()) {
+    const matches = key.match(/predicate(\d+)-(.*)/);
+
+    if (!matches || matches.length < 3) continue;
+
+    const idx = Number(matches[1]);
+    if (predicates.length <= idx) predicates.push({});
+    predicates[idx][matches[2]] = Number(val);
+  }
+
+  return predicates as unknown as Array<Predicate>;
 }
 
 export function parseFormDataIntoQuestionData(formData: FormData) {
