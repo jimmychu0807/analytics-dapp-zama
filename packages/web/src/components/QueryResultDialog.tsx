@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useFhevm } from "@/contexts/FhevmContext";
-import { type QuestionSet, type QueryResult } from "@/types";
+import { type QuestionSet, type QueryResult, type QueryRequest, QuestionType } from "@/types";
+import { formatPercent } from "@/utils";
 import { getAndClearQueryResult } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { useState } from "react";
@@ -8,11 +9,11 @@ import { usePublicClient, useWalletClient, useConfig } from "wagmi";
 
 export function QueryResultDialog({
   questionSet,
-  qrId,
+  queryRequest,
   ansLen,
 }: {
   questionSet: QuestionSet;
-  qrId: bigint;
+  queryRequest: QueryRequest;
   ansLen: bigint;
 }) {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -21,6 +22,8 @@ export function QueryResultDialog({
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const config = useConfig();
+
+  const compareActions = ["==", "!=", ">", "<"];
 
   const openQueryResultDialog = async () => {
     setDialogOpen(true);
@@ -32,7 +35,7 @@ export function QueryResultDialog({
       walletClient,
       fhevm,
       config,
-      qrId,
+      queryRequest.id,
     );
 
     setQueryResult(clearQueryResult);
@@ -58,13 +61,40 @@ export function QueryResultDialog({
                 <div className="text-sm text-gray-400 font-semibold">Question</div>
                 <div>{questionSet.main.text}</div>
               </div>
+              <div>
+                <div className="text-sm text-gray-400 font-semibold">Predicates</div>
+                {queryRequest.predicates.length > 0 ? (
+                  queryRequest.predicates.map((predicate, i) => (
+                    <div key={`pred-${i}`}>
+                      <span>{questionSet.metas[predicate.metaOpt].text}</span>&nbsp;
+                      <span>{compareActions[predicate.op]}</span>&nbsp;
+                      <span>
+                        {questionSet.metas[predicate.metaOpt].t === QuestionType.Option
+                          ? questionSet.metas[predicate.metaOpt].options[predicate.metaVal]
+                          : predicate.metaVal}{" "}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div>No predicate</div>
+                )}
+              </div>
               {queryResult ? (
                 <>
                   <div>
-                    <div className="text-sm text-gray-400 font-semibold">Predicates</div>
-                  </div>
-                  <div>
                     <div className="text-sm text-gray-400 font-semibold">Result</div>
+                    <div>
+                      {questionSet.main.t === QuestionType.Option ? (
+                        questionSet.main.options.map((optText, idx) => (
+                          <div key={`${optText}-${idx}`}>
+                            {optText}: {queryResult.acc[idx]} (
+                            {formatPercent(queryResult.acc[idx], queryResult.filteredAnsCount)})
+                          </div>
+                        ))
+                      ) : (
+                        <></>
+                      )}{" "}
+                    </div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-400 font-semibold">
@@ -76,7 +106,7 @@ export function QueryResultDialog({
                   </div>
                 </>
               ) : (
-                <div>loading...</div>
+                <div>resolving...</div>
               )}
             </div>
           </DialogPanel>

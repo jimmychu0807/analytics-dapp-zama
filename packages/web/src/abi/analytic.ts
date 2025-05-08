@@ -427,6 +427,79 @@ export const abi: Abi = [
         type: "uint64",
       },
     ],
+    name: "getQueryRequest",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "uint64",
+            name: "questionId",
+            type: "uint64",
+          },
+          {
+            internalType: "address",
+            name: "owner",
+            type: "address",
+          },
+          {
+            components: [
+              {
+                internalType: "uint8",
+                name: "metaOpt",
+                type: "uint8",
+              },
+              {
+                internalType: "enum IAnalytic.PredicateOp",
+                name: "op",
+                type: "uint8",
+              },
+              {
+                internalType: "uint32",
+                name: "metaVal",
+                type: "uint32",
+              },
+            ],
+            internalType: "struct IAnalytic.Predicate[]",
+            name: "predicates",
+            type: "tuple[]",
+          },
+          {
+            internalType: "euint32[]",
+            name: "acc",
+            type: "uint256[]",
+          },
+          {
+            internalType: "euint32",
+            name: "ansCount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint32",
+            name: "accSteps",
+            type: "uint32",
+          },
+          {
+            internalType: "enum IAnalytic.RequestState",
+            name: "state",
+            type: "uint8",
+          },
+        ],
+        internalType: "struct IAnalytic.QueryRequest",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint64",
+        name: "reqId",
+        type: "uint64",
+      },
+    ],
     name: "getQueryResult",
     outputs: [
       {
