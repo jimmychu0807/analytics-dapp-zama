@@ -6,7 +6,6 @@ import { getConfig } from "@/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
-import Script from "next/script";
 import { cookieToInitialState } from "wagmi";
 
 const geistSans = Geist({

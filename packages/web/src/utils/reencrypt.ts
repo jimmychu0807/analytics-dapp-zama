@@ -4,18 +4,18 @@ import { type Account, type TypedDataDomain } from "viem";
 import { type UseConfigReturnType } from "wagmi";
 import { signTypedData } from "wagmi/actions";
 
-const EBOOL_T = 0;
-const EUINT4_T = 1;
-const EUINT8_T = 2;
-const EUINT16_T = 3;
+// const EBOOL_T = 0;
+// const EUINT4_T = 1;
+// const EUINT8_T = 2;
+// const EUINT16_T = 3;
 const EUINT32_T = 4;
-const EUINT64_T = 5;
-const EUINT128_T = 6;
-const EUINT160_T = 7; // @dev It is the one for eaddresses.
-const EUINT256_T = 8;
-const EBYTES64_T = 9;
-const EBYTES128_T = 10;
-const EBYTES256_T = 11;
+// const EUINT64_T = 5;
+// const EUINT128_T = 6;
+// const EUINT160_T = 7; // @dev It is the one for eaddresses.
+// const EUINT256_T = 8;
+// const EBYTES64_T = 9;
+// const EBYTES128_T = 10;
+// const EBYTES256_T = 11;
 
 export function verifyType(handle: bigint, expectedType: number) {
   if (handle === 0n) {
@@ -41,7 +41,7 @@ export async function reencryptEuint32(
   contractAddress: string,
 ): Promise<bigint> {
   verifyType(handle, EUINT32_T);
-  return reencryptHandle(config, account, instance, handle, contractAddress);
+  return reencryptHandle(config, account, instance, handle, contractAddress) as Promise<bigint>;
 }
 
 async function reencryptHandle(
@@ -50,7 +50,7 @@ async function reencryptHandle(
   instance: FhevmInstance | MockedFhevmInstance,
   handle: bigint,
   contractAddress: string,
-): Promise<any> {
+): Promise<unknown> {
   const { publicKey, privateKey } = instance.generateKeypair();
   const eip712 = instance.createEIP712(publicKey, contractAddress);
   const castedEip712 = { ...eip712, domain: eip712.domain as unknown as TypedDataDomain };

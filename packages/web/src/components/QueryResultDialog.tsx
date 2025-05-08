@@ -1,21 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { useFhevm } from "@/contexts/FhevmContext";
-import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
+import { type QuestionSet, type QueryResult } from "@/types";
 import { getAndClearQueryResult } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
-import { type MouseEvent, useState, useEffect } from "react";
+import { useState } from "react";
 import { usePublicClient, useWalletClient, useConfig } from "wagmi";
 
 export function QueryResultDialog({
-  qId,
   questionSet,
   qrId,
+  ansLen,
 }: {
-  qId: number;
   questionSet: QuestionSet;
   qrId: bigint;
+  ansLen: bigint;
 }) {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [queryResult, setQueryResult] = useState<QueryResult>();
   const fhevm = useFhevm();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -26,7 +27,15 @@ export function QueryResultDialog({
 
     if (!fhevm || !publicClient || !walletClient) return;
 
-    const queryResult = getAndClearQueryResult(publicClient, walletClient, fhevm, config, qrId);
+    const clearQueryResult = await getAndClearQueryResult(
+      publicClient,
+      walletClient,
+      fhevm,
+      config,
+      qrId,
+    );
+
+    setQueryResult(clearQueryResult);
   };
 
   return (
@@ -49,20 +58,26 @@ export function QueryResultDialog({
                 <div className="text-sm text-gray-400 font-semibold">Question</div>
                 <div>{questionSet.main.text}</div>
               </div>
-              <div>
-                <div className="text-sm text-gray-400 font-semibold">Predicates</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400 font-semibold">Result</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400 font-semibold">
-                  Answers that match predicates
-                </div>
-                <div>
-                  {`x`} / {`y`}
-                </div>
-              </div>
+              {queryResult ? (
+                <>
+                  <div>
+                    <div className="text-sm text-gray-400 font-semibold">Predicates</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-400 font-semibold">Result</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-400 font-semibold">
+                      Answers that match predicates
+                    </div>
+                    <div>
+                      {queryResult.filteredAnsCount} / {ansLen}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>loading...</div>
+              )}
             </div>
           </DialogPanel>
         </div>

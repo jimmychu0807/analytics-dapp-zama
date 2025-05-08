@@ -1,3 +1,4 @@
+import { QueryResult } from "@/types";
 import { analyticContract } from "@/utils";
 import { type MockedFhevmInstance } from "@/utils/fhevmjsMocked";
 import { reencryptEuint32 } from "@/utils/reencrypt";
@@ -74,14 +75,18 @@ export async function getAndClearQueryResult(
 
   if (!account) return;
 
-  const queryResult = await publicClient.readContract({
+  const queryResult = (await publicClient.readContract({
     ...analyticContract,
     functionName: "getQueryResult",
     args: [qrId],
     account,
-  });
+  })) as QueryResult;
 
-  console.log("queryResult:", queryResult);
+  const clearAcc = await Promise.all(
+    queryResult.acc.map((handle) =>
+      reencryptEuint32(config, account, fhevm, handle, analyticContract.address),
+    ),
+  );
 
   const clearFilteredAnsCount = await reencryptEuint32(
     config,
@@ -91,5 +96,9 @@ export async function getAndClearQueryResult(
     analyticContract.address,
   );
 
-  console.log("clearFilteredAnsCount:", clearFilteredAnsCount);
+  return {
+    acc: clearAcc,
+    filteredAnsCount: clearFilteredAnsCount,
+    ttlAnsCount: queryResult.ttlAnsCount,
+  };
 }

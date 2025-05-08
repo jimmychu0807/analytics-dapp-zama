@@ -63,10 +63,6 @@ export function QueryRequestsDialog({
     setLoading(undefined);
   };
 
-  const fetchQueryResult = async (ev: MouseEvent<HTMLElement>) => {
-    ev.preventDefault();
-  };
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -139,7 +135,7 @@ export function QueryRequestsDialog({
                       Process
                     </Button>
                   ) : (
-                    <QueryResultDialog qId={qId} questionSet={questionSet} qrId={qr.id} />
+                    <QueryResultDialog questionSet={questionSet} qrId={qr.id} ansLen={ansLen} />
                   )}
                 </div>
               ))}
