@@ -1,8 +1,9 @@
 import { analyticContract } from "@/utils";
 import { type MockedFhevmInstance } from "@/utils/fhevmjsMocked";
-import { type FhevmInstance } from "fhevmjs/bundle";
-import { toHex } from "viem";
-import { type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
+import { reencryptEuint32 } from "@/utils/reencrypt";
+import { type FhevmInstance } from "fhevmjs/web";
+import { toHex, type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
+import { type UseConfigReturnType } from "wagmi";
 
 export async function sendAnalyticTransaction(
   publicClient: PublicClient,
@@ -60,4 +61,35 @@ export async function submitAnswerTx(
   // await awaitAllDecryptionResults();
 
   return receipt;
+}
+
+export async function getAndClearQueryResult(
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  fhevm: FhevmInstance | MockedFhevmInstance,
+  config: UseConfigReturnType,
+  qrId: bigint,
+) {
+  const { account } = walletClient;
+
+  if (!account) return;
+
+  const queryResult = await publicClient.readContract({
+    ...analyticContract,
+    functionName: "getQueryResult",
+    args: [qrId],
+    account,
+  });
+
+  console.log("queryResult:", queryResult);
+
+  const clearFilteredAnsCount = await reencryptEuint32(
+    config,
+    account,
+    fhevm,
+    queryResult.filteredAnsCount,
+    analyticContract.address,
+  );
+
+  console.log("clearFilteredAnsCount:", clearFilteredAnsCount);
 }

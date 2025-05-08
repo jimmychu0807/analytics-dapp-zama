@@ -1,7 +1,8 @@
-import { type Account } from "viem";
+import { type MockedFhevmInstance } from "@/utils/fhevmjsMocked";
 import { type FhevmInstance } from "fhevmjs/web";
-import { signTypedData } from "@wagmi/core";
-import { type UseConfigReturnType } from 'wagmi';
+import { type Account, type TypedDataDomain } from "viem";
+import { type UseConfigReturnType } from "wagmi";
+import { signTypedData } from "wagmi/actions";
 
 const EBOOL_T = 0;
 const EUINT4_T = 1;
@@ -35,7 +36,7 @@ export function verifyType(handle: bigint, expectedType: number) {
 export async function reencryptEuint32(
   config: UseConfigReturnType,
   account: Account,
-  instance: FhevmInstance,
+  instance: FhevmInstance | MockedFhevmInstance,
   handle: bigint,
   contractAddress: string,
 ): Promise<bigint> {
@@ -46,13 +47,15 @@ export async function reencryptEuint32(
 async function reencryptHandle(
   config: UseConfigReturnType,
   account: Account,
-  instance: FhevmInstance,
+  instance: FhevmInstance | MockedFhevmInstance,
   handle: bigint,
   contractAddress: string,
 ): Promise<any> {
   const { publicKey, privateKey } = instance.generateKeypair();
   const eip712 = instance.createEIP712(publicKey, contractAddress);
-  const signature = await signTypedData(config, eip712);
+  const castedEip712 = { ...eip712, domain: eip712.domain as unknown as TypedDataDomain };
+
+  const signature = await signTypedData(config, castedEip712);
   const reencryptedHandle = await instance.reencrypt(
     handle,
     privateKey,
