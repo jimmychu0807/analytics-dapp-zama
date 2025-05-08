@@ -65,6 +65,13 @@ export function formatPercent(num: bigint | number, denom: bigint | number): str
   return `${ans}%`;
 }
 
+export function formatNumber(num: bigint | number): string {
+  const toNum = Number(num);
+  if (Number.isInteger(toNum)) return toNum.toLocaleString();
+
+  return toNum.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+}
+
 export function clientQuestionState(question: QuestionSet): QuestionState {
   if (question.state === QuestionState.Closed) return QuestionState.Closed;
 
