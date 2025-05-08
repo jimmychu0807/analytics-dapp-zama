@@ -13,7 +13,7 @@ import {
   PRIVATE_KEY_COPROCESSOR_ACCOUNT,
   PRIVATE_KEY_KMS_SIGNER,
 } from "../test/constants";
-import { initGateway } from "./asyncDecrypt";
+import { currentTime, initGateway } from "./asyncDecrypt";
 import { awaitCoprocessor, getClearText, insertSQL } from "./coprocessorUtils";
 
 const HARDHAT_ENDPOINT = "http://127.0.0.1:8545";
@@ -63,13 +63,17 @@ app.use(express.json());
 const port = 3000;
 
 app.get("/ping", async (req: Request, res: Response<ApiResponse>) => {
+  console.log(`${currentTime()}: GET /ping`);
+
   res.json({
     status: "success",
-    message: "pong"
+    message: "pong",
   });
 });
 
 app.post("/get-clear-text", async (req: Request, res: Response<ApiResponse>) => {
+  console.log(`${currentTime()}: POST /get-clear-text`, req.body);
+
   try {
     const { handle } = req.body;
 
@@ -186,6 +190,8 @@ async function encrypt(
 }
 
 app.post("/encrypt", async (req: Request<unknown, unknown, EncryptRequest>, res: Response<EncryptResponse>) => {
+  console.log(`${currentTime()}: POST /encrypt`, req.body);
+
   try {
     const { values, bits, userAddress, contractAddress } = req.body;
 
@@ -422,7 +428,7 @@ async function kmsSign(
 }
 
 app.listen(port, async () => {
-  await waitOn({ delay: 500, resources: [HARDHAT_ENDPOINT] });
+  await waitOn({ delay: 500, timeout: 30000, resources: [HARDHAT_ENDPOINT] });
 
   console.log(`⚙️ Server running at http://localhost:${port}`);
   await initGateway();

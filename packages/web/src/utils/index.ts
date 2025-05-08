@@ -60,6 +60,11 @@ export function formatDatetime(timestamp: number): string {
   return dt.toFormat("yyyy-MM-dd HH:mm");
 }
 
+export function formatPercent(num: bigint | number, denom: bigint | number): string {
+  const ans = ((Number(num) * 100) / Number(denom)).toFixed(3);
+  return `${ans}%`;
+}
+
 export function clientQuestionState(question: QuestionSet): QuestionState {
   if (question.state === QuestionState.Closed) return QuestionState.Closed;
 

@@ -6,8 +6,7 @@ import { analyticContract, querySteps } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { type MouseEvent, useState, useEffect } from "react";
-import { type Address } from "viem";
-import { useAccount, useReadContract, usePublicClient, useWalletClient } from "wagmi";
+import { usePublicClient, useWalletClient } from "wagmi";
 
 export function QueryRequestsDialog({
   qId,
@@ -20,22 +19,11 @@ export function QueryRequestsDialog({
 }) {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
   const [isLoading, setLoading] = useState<bigint>();
+  const [queryRequestIds, setQueryRequestIds] = useState<bigint[]>([]);
+  const [queryRequests, setQueryRequests] = useState<QueryRequest[]>([]);
+
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const { address } = useAccount();
-  const [queryRequests, setQueryRequests] = useState<Array<QueryRequest>>([]);
-
-  const {
-    data: queryRequestIds,
-    error,
-    status,
-  } = useReadContract({
-    ...analyticContract,
-    functionName: "getUserQueryRequestList",
-    args: [address, qId],
-  });
-
-  if (status === "error") console.error("Read contract error:", error);
 
   const processQueryRequest = async ({
     ev,
@@ -66,25 +54,49 @@ export function QueryRequestsDialog({
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      const castedReqIds = queryRequestIds as unknown as Array<bigint>;
-      if (!castedReqIds || castedReqIds.length === 0 || !publicClient) return;
+      if (!publicClient || !walletClient) return;
 
-      const _queryRequests = (await Promise.all(
-        castedReqIds.map((id) =>
+      const { address } = walletClient.account;
+
+      try {
+        const _queryRequestIds = await publicClient.readContract({
+          ...analyticContract,
+          functionName: "getUserQueryRequestList",
+          args: [address, qId],
+        });
+
+        if (isMounted) {
+          setQueryRequestIds(_queryRequestIds as bigint[]);
+        }
+      } catch (err) {
+        console.error("getUserQueryRequestList error:", err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [publicClient, walletClient, qId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (!queryRequestIds || queryRequestIds.length === 0 || !publicClient) return;
+
+      const _queryRequests = await Promise.all(
+        queryRequestIds.map((id) =>
           publicClient.readContract({
             ...analyticContract,
-            functionName: "queryRequests",
-            args: [id],
+            functionName: "getQueryRequest",
+            args: [id as bigint],
           }),
         ),
-      )) as Array<[bigint, Address, bigint, number, number]>;
+      );
 
-      const processed = _queryRequests.map((qr, idx) => ({
-        id: castedReqIds[idx],
-        qId: qr[0],
-        accSteps: qr[3],
-        state: Number(qr[4]),
-      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const processed = _queryRequests.map((qr: any, idx) => ({
+        ...qr,
+        id: queryRequestIds[idx],
+      })) as QueryRequest[];
 
       if (isMounted) {
         setQueryRequests(processed);
@@ -135,7 +147,11 @@ export function QueryRequestsDialog({
                       Process
                     </Button>
                   ) : (
-                    <QueryResultDialog questionSet={questionSet} qrId={qr.id} ansLen={ansLen} />
+                    <QueryResultDialog
+                      questionSet={questionSet}
+                      queryRequest={qr}
+                      ansLen={ansLen}
+                    />
                   )}
                 </div>
               ))}

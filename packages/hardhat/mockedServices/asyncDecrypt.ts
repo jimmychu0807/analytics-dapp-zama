@@ -23,7 +23,7 @@ const CiphertextType = {
   11: "bytes",
 };
 
-const currentTime = (): string => {
+export const currentTime = (): string => {
   const now = new Date();
   return now.toLocaleTimeString("en-US", { hour12: true, hour: "numeric", minute: "numeric", second: "numeric" });
 };
@@ -38,60 +38,66 @@ const gateway = new ethers.Contract(GATEWAYCONTRACT_ADDRESS, gatewayArtifact.abi
 
 export const initGateway = async (): Promise<void> => {
   gateway.on("EventDecryption", async (requestID, cts) => {
-    console.log(`${await currentTime()} - Requested decrypt (requestID ${requestID}) for handles ${cts}`);
+    console.log(`${currentTime()}: (event) Requested decrypt (requestID ${requestID}) for handles ${cts}`);
     await fulfillRequest(requestID, cts);
   });
   gateway.on("ResultCallback", async (requestID, success, result, eventData) => {
     const blockNumber = eventData.log.blockNumber;
-    console.log(`${await currentTime()} - Fulfilled decrypt on block ${blockNumber} (requestID ${requestID})`);
+    console.log(`${currentTime()}: (event) Fulfilled decrypt on block ${blockNumber} (requestID ${requestID})`);
   });
 };
 
 const allTrue = (arr: boolean[], fn = Boolean) => arr.every(fn);
 
 const fulfillRequest = async (requestID: bigint, handles: bigint[]) => {
-  await awaitCoprocessor();
+  console.log(`${currentTime()}: fulfillRequest() called.`);
 
-  const typesList = handles.map((handle) => parseInt(handle.toString(16).slice(-4, -2), 16));
+  try {
+    await awaitCoprocessor();
 
-  const isAllowedForDec = await Promise.all(handles.map(async (handle) => acl.isAllowedForDecryption(handle)));
-  if (!allTrue(isAllowedForDec)) {
-    throw new Error("Some handle is not authorized for decryption");
+    const typesList = handles.map((handle) => parseInt(handle.toString(16).slice(-4, -2), 16));
+    const isAllowedForDec = await Promise.all(handles.map(async (handle) => acl.isAllowedForDecryption(handle)));
+    if (!allTrue(isAllowedForDec)) {
+      throw new Error("Some handle is not authorized for decryption");
+    }
+
+    const types = typesList.map((num) => CiphertextType[num]);
+    const values = await Promise.all(handles.map(async (handle) => BigInt(await getClearText(handle))));
+    const valuesFormatted = values.map((value, index) =>
+      types[index] === "address" ? "0x" + value.toString(16).padStart(40, "0") : value,
+    );
+    const valuesFormatted2 = valuesFormatted.map((value, index) =>
+      typesList[index] === 9 ? "0x" + value.toString(16).padStart(128, "0") : value,
+    );
+    const valuesFormatted3 = valuesFormatted2.map((value, index) =>
+      typesList[index] === 10 ? "0x" + value.toString(16).padStart(256, "0") : value,
+    );
+    const valuesFormatted4 = valuesFormatted3.map((value, index) =>
+      typesList[index] === 11 ? "0x" + value.toString(16).padStart(512, "0") : value,
+    );
+
+    const abiCoder = new ethers.AbiCoder();
+    const encodedData = abiCoder.encode(["uint256", ...types], [31, ...valuesFormatted4]); // 31 is just a dummy uint256 requestID to get correct abi encoding for the remaining arguments (i.e everything except the requestID)
+    const calldata = "0x" + encodedData.slice(66); // we just pop the dummy requestID to get the correct value to pass for `decryptedCts`
+
+    const numSigners = 1; // for the moment mocked mode only uses 1 signer
+    const decryptResultsEIP712signatures = await computeDecryptSignatures(handles, calldata, numSigners);
+    await provider.send("hardhat_impersonateAccount", [ZeroAddress]);
+    const impersonatedSigner = new ethers.JsonRpcSigner(provider, ZeroAddress);
+
+    const tx = await gateway
+      .connect(impersonatedSigner)
+      .fulfillRequest(requestID, calldata, decryptResultsEIP712signatures);
+    await tx.wait();
+    await provider.send("hardhat_stopImpersonatingAccount", [ZeroAddress]);
+
+    const blockNumber = await provider.send("eth_blockNumber", []);
+    console.log(
+      `${currentTime()}: fulfillRequest() completed. Gateway sent decryption result in callback tx succesfully for requestID ${requestID} on block #: ${blockNumber}`,
+    );
+  } catch (err) {
+    console.error(`${currentTime()}: fulfillRequest() error:`, err);
   }
-
-  const types = typesList.map((num) => CiphertextType[num]);
-  const values = await Promise.all(handles.map(async (handle) => BigInt(await getClearText(handle))));
-  const valuesFormatted = values.map((value, index) =>
-    types[index] === "address" ? "0x" + value.toString(16).padStart(40, "0") : value,
-  );
-  const valuesFormatted2 = valuesFormatted.map((value, index) =>
-    typesList[index] === 9 ? "0x" + value.toString(16).padStart(128, "0") : value,
-  );
-  const valuesFormatted3 = valuesFormatted2.map((value, index) =>
-    typesList[index] === 10 ? "0x" + value.toString(16).padStart(256, "0") : value,
-  );
-  const valuesFormatted4 = valuesFormatted3.map((value, index) =>
-    typesList[index] === 11 ? "0x" + value.toString(16).padStart(512, "0") : value,
-  );
-
-  const abiCoder = new ethers.AbiCoder();
-  const encodedData = abiCoder.encode(["uint256", ...types], [31, ...valuesFormatted4]); // 31 is just a dummy uint256 requestID to get correct abi encoding for the remaining arguments (i.e everything except the requestID)
-  const calldata = "0x" + encodedData.slice(66); // we just pop the dummy requestID to get the correct value to pass for `decryptedCts`
-
-  const numSigners = 1; // for the moment mocked mode only uses 1 signer
-  const decryptResultsEIP712signatures = await computeDecryptSignatures(handles, calldata, numSigners);
-  await provider.send("hardhat_impersonateAccount", [ZeroAddress]);
-  const impersonatedSigner = new ethers.JsonRpcSigner(provider, ZeroAddress);
-  const tx = await gateway
-    .connect(impersonatedSigner)
-    .fulfillRequest(requestID, calldata, decryptResultsEIP712signatures);
-  await tx.wait();
-  await provider.send("hardhat_stopImpersonatingAccount", [ZeroAddress]);
-
-  const blockNumber = await provider.send("eth_blockNumber", []);
-  console.log(
-    `Gateway sent decryption result in callback tx succesfully for requestID ${requestID} on block no ${blockNumber}`,
-  );
 };
 
 async function computeDecryptSignatures(

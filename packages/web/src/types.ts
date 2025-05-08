@@ -1,3 +1,5 @@
+import { type Address } from "viem";
+
 export enum QuestionType {
   Option,
   Value,
@@ -29,7 +31,11 @@ export type Predicate = {
 
 export type QueryRequest = {
   id: bigint;
-  qId: bigint;
+  questionId: bigint;
+  owner: Address;
+  predicates: Predicate[];
+  acc: bigint[];
+  ansCount: bigint;
   accSteps: number;
   state: RequestState;
 };

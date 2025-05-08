@@ -94,6 +94,11 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         return list;
     }
 
+    function getQueryRequest(uint64 reqId) public view returns (QueryRequest memory) {
+        QueryRequest storage req = queryRequests[reqId];
+        return req;
+    }
+
     function getQueryResult(
         uint64 reqId
     ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
@@ -200,9 +205,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
 
-        console.log("qId: %s", qId);
-        console.log("sender: %s", sender);
-        console.log("decValid: %s", decValid);
+        console.log("sender: %s, reqId: %s, decValid: %s", sender, reqId, decValid);
 
         if (!decValid) revert RejectAnswer(qId, sender);
 
