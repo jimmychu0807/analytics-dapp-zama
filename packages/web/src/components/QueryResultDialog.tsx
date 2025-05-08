@@ -99,10 +99,6 @@ export function QueryResultDialog({
                             <span className="font-semibold">{formatNumber(queryResult.acc[0])}</span>
                           </div>
                           <div>
-                            <span className="w-16 inline-block">sum</span>
-                            <span className="font-semibold">{formatNumber(queryResult.acc[1])}</span>
-                          </div>
-                          <div>
                             <span className="w-16 inline-block">mean</span>
                             <span className="font-semibold">{formatNumber((Number(queryResult.acc[1])/Number(queryResult.filteredAnsCount)))}</span>
                           </div>
