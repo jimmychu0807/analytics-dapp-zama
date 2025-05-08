@@ -1,4 +1,5 @@
 import { NewQueryRequestDialog } from "@/components/NewQueryRequestDialog";
+import { QueryResultDialog } from "@/components/QueryResultDialog";
 import { Button } from "@/components/ui/button";
 import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
 import { analyticContract, querySteps } from "@/utils";
@@ -8,12 +9,14 @@ import { type MouseEvent, useState, useEffect } from "react";
 import { type Address } from "viem";
 import { useAccount, useReadContract, usePublicClient, useWalletClient } from "wagmi";
 
-export function QueryRequestDialog({
+export function QueryRequestsDialog({
   qId,
   questionSet,
+  ansLen,
 }: {
   qId: number;
   questionSet: QuestionSet;
+  ansLen: bigint;
 }) {
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
   const [isLoading, setLoading] = useState<bigint>();
@@ -58,10 +61,6 @@ export function QueryRequestDialog({
       console.error("Error on processQueryRequest:", (err as Error).message);
     }
     setLoading(undefined);
-  };
-
-  const fetchQueryResult = async (ev: MouseEvent<HTMLElement>) => {
-    ev.preventDefault();
   };
 
   useEffect(() => {
@@ -118,12 +117,17 @@ export function QueryRequestDialog({
               {queryRequests.map((qr) => (
                 <div key={`qr-${qr.id}`} className="flex flex-row justify-between">
                   <div className="self-center text-sm">
-                    Request #{qr.id}: {RequestState[qr.state]}
+                    Request #{qr.id}:&nbsp;
+                    <span className="text-gray-800 font-medium">
+                      {qr.state !== RequestState.Completed
+                        ? `${qr.accSteps} / ${ansLen.toString()}`
+                        : RequestState[qr.state]}
+                    </span>
                   </div>
                   {qr.state !== RequestState.Completed ? (
                     <Button
                       variant="outline"
-                      className="w-20"
+                      className="min-w-22"
                       onClick={(ev: MouseEvent<HTMLElement>) => processQueryRequest({ ev, qr })}
                       isLoading={isLoading === qr.id}
                       disabled={isLoading !== undefined}
@@ -131,9 +135,7 @@ export function QueryRequestDialog({
                       Process
                     </Button>
                   ) : (
-                    <Button variant="outline" className="w-20" onClick={fetchQueryResult}>
-                      View
-                    </Button>
+                    <QueryResultDialog questionSet={questionSet} qrId={qr.id} ansLen={ansLen} />
                   )}
                 </div>
               ))}

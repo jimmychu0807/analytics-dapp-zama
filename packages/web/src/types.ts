@@ -34,6 +34,12 @@ export type QueryRequest = {
   state: RequestState;
 };
 
+export type QueryResult = {
+  acc: bigint[];
+  filteredAnsCount: bigint;
+  ttlAnsCount: number;
+};
+
 export type QuestionSpec = {
   text: string;
   options: string[];

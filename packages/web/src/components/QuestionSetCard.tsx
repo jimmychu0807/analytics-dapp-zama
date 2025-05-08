@@ -1,5 +1,5 @@
 import { AnswerDialog } from "@/components/AnswerDialog";
-import { QueryRequestDialog } from "@/components/QueryRequestDialog";
+import { QueryRequestsDialog } from "@/components/QueryRequestsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { type QuestionSet, QuestionState } from "@/types";
@@ -113,7 +113,9 @@ export function QuestionSetCard({ qId }: { qId: number }) {
             Close
           </Button>
         )}
-        {isAdmin && <QueryRequestDialog qId={qId} questionSet={questionSet} />}
+        {isAdmin && (
+          <QueryRequestsDialog qId={qId} questionSet={questionSet} ansLen={ansLen ?? 0n} />
+        )}
       </CardFooter>
     </Card>
   );
