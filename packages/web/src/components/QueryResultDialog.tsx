@@ -37,7 +37,6 @@ export function QueryResultDialog({
       config,
       queryRequest.id,
     );
-
     setQueryResult(clearQueryResult);
   };
 
@@ -59,7 +58,7 @@ export function QueryResultDialog({
             <div className="flex flex-col w-full gap-4">
               <div>
                 <div className="text-sm text-gray-400 font-semibold">Question</div>
-                <div>{questionSet.main.text}</div>
+                <div className="text-base text-gray-800 font-semibold">{questionSet.main.text}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-400 font-semibold">Predicates</div>
@@ -76,7 +75,7 @@ export function QueryResultDialog({
                     </div>
                   ))
                 ) : (
-                  <div>No predicate</div>
+                  <div className="text-sm text-gray-800 font-semibold">No predicate</div>
                 )}
               </div>
               {queryResult ? (
@@ -85,14 +84,21 @@ export function QueryResultDialog({
                     <div className="text-sm text-gray-400 font-semibold">Result</div>
                     <div>
                       {questionSet.main.t === QuestionType.Option ? (
-                        questionSet.main.options.map((optText, idx) => (
+                        questionSet.main.options.map((optText, idx) =>
                           <div key={`${optText}-${idx}`}>
                             {optText}: {queryResult.acc[idx]} (
                             {formatPercent(queryResult.acc[idx], queryResult.filteredAnsCount)})
                           </div>
-                        ))
+                        )
                       ) : (
-                        <></>
+                        <>
+                          <div>min: {queryResult.acc[0]}</div>
+                          <div>sum: {queryResult.acc[1]}</div>
+                          <div>mean:&nbsp;
+                            {(Number(queryResult.acc[1])/Number(queryResult.filteredAnsCount)).toFixed(2)}
+                          </div>
+                          <div>max: {queryResult.acc[2]}</div>
+                        </>
                       )}{" "}
                     </div>
                   </div>
@@ -100,7 +106,7 @@ export function QueryResultDialog({
                     <div className="text-sm text-gray-400 font-semibold">
                       Answers that match predicates
                     </div>
-                    <div>
+                    <div className="text-sm text-gray-800 font-semibold">
                       {queryResult.filteredAnsCount} / {ansLen}
                     </div>
                   </div>
