@@ -84,27 +84,36 @@ export function QueryResultDialog({
                     <div className="text-sm text-gray-400 font-medium">Result</div>
                     <div className="text-sm text-gray-800 font-medium">
                       {questionSet.main.t === QuestionType.Option ? (
-                        questionSet.main.options.map((optText, idx) =>
+                        questionSet.main.options.map((optText, idx) => (
                           <div key={`${optText}-${idx}`}>
                             <span className="w-24 inline-block">{optText}</span>
                             <span className="font-semibold">
-                              {queryResult.acc[idx]} ({formatPercent(queryResult.acc[idx], queryResult.filteredAnsCount)})
+                              {queryResult.acc[idx]} (
+                              {formatPercent(queryResult.acc[idx], queryResult.filteredAnsCount)})
                             </span>
                           </div>
-                        )
+                        ))
                       ) : (
                         <>
                           <div>
                             <span className="w-16 inline-block">min</span>
-                            <span className="font-semibold">{formatNumber(queryResult.acc[0])}</span>
+                            <span className="font-semibold">
+                              {formatNumber(queryResult.acc[0])}
+                            </span>
                           </div>
                           <div>
                             <span className="w-16 inline-block">mean</span>
-                            <span className="font-semibold">{formatNumber((Number(queryResult.acc[1])/Number(queryResult.filteredAnsCount)))}</span>
+                            <span className="font-semibold">
+                              {formatNumber(
+                                Number(queryResult.acc[1]) / Number(queryResult.filteredAnsCount),
+                              )}
+                            </span>
                           </div>
                           <div>
                             <span className="w-16 inline-block">max</span>
-                            <span className="font-semibold">{formatNumber(queryResult.acc[2])}</span>
+                            <span className="font-semibold">
+                              {formatNumber(queryResult.acc[2])}
+                            </span>
                           </div>
                         </>
                       )}{" "}

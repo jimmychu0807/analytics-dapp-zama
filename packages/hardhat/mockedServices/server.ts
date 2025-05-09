@@ -36,6 +36,8 @@ enum Types {
   ebytes256,
 }
 
+type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
+
 interface ApiSuccessResponse {
   status: "success";
   result: string;
@@ -57,8 +59,6 @@ function uint8ArrayToHexString(uint8Array: Uint8Array) {
     .join("");
 }
 
-type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -68,7 +68,7 @@ app.get("/ping", async (req: Request, res: Response<ApiResponse>) => {
 
   res.json({
     status: "success",
-    message: "pong",
+    result: "pong",
   });
 });
 
@@ -131,11 +131,14 @@ type EncryptionKey = keyof typeof ENCRYPTION_TYPES;
 interface EncryptRequest {
   values: string[];
   bits: EncryptionKey[];
+  userAddress: string;
+  contractAddress: string;
 }
 
 interface EncryptResponse {
   status: "success" | "error";
-  handles?: Uint8Array[];
+  // handles?: Uint8Array[];
+  handles?: string[];
   inputProof?: string;
   message?: string;
 }

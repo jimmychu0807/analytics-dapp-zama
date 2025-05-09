@@ -8,7 +8,8 @@ dotenv.config();
 
 const analyticAddress = process.env.NEXT_PUBLIC_ANALYTIC_ADDRESS || "";
 
-const questions = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const questions: Record<string, any> = {
   "l2-usage": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
@@ -20,7 +21,8 @@ const questions = {
   },
 };
 
-const answers = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const answers: Record<string, any> = {
   "l2-usage": [
     [0, 0, 20],
     [1, 1, 30],
@@ -71,7 +73,7 @@ task("answer", "Answer questions")
       const signer = signers[idx];
       const signerAddr = signerAddrs[idx];
       const input = fhevm.createEncryptedInput(analyticAddress, signerAddr);
-      const inputs = await ans.reduce((acc, val) => acc.add32(val), input).encrypt();
+      const inputs = await ans.reduce((acc: typeof input, val: number) => acc.add32(val), input).encrypt();
 
       const tx = await analyticContract
         .connect(signer)

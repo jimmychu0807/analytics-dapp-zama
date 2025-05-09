@@ -8,24 +8,21 @@ import { createEncryptedInputMocked, reencryptRequestMocked } from "./fhevmjsMoc
 const kmsAdd = KMSVERIFIER_ADDRESS;
 const aclAdd = ACL_ADDRESS;
 
-export type MockedFhevmInstance = {
-  reencrypt: typeof reencryptRequestMocked;
-  createEncryptedInput: typeof createEncryptedInputMocked;
-  getPublicKey: () => string;
-  generateKeypair: typeof generateKeypair;
-  createEIP712: ReturnType<typeof createEIP712>;
-};
+export type MockedFhevmInstance = ReturnType<typeof getMockedFhevm>;
+
+export function getMockedFhevm() {
+  return {
+    reencrypt: reencryptRequestMocked,
+    createEncryptedInput: createEncryptedInputMocked,
+    getPublicKey: () => "0xFFAA44433",
+    generateKeypair,
+    createEIP712: createEIP712(network.config.chainId!),
+  };
+}
 
 export const createInstance = async (): Promise<FhevmInstance | MockedFhevmInstance> => {
   if (network.name === "hardhat") {
-    const instance = {
-      reencrypt: reencryptRequestMocked,
-      createEncryptedInput: createEncryptedInputMocked,
-      getPublicKey: () => "0xFFAA44433",
-      generateKeypair: generateKeypair,
-      createEIP712: createEIP712(network.config.chainId!),
-    };
-    return instance;
+    return getMockedFhevm();
   } else {
     const instance = await createFhevmInstance({
       kmsContractAddress: kmsAdd,
