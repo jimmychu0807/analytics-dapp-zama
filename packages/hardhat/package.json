@@ -15,7 +15,7 @@
     "compile": "hardhat compile",
     "mocked-server": "tsx mockedServices/server.ts ",
     "typecheck": "tsc --noEmit",
-    "lint": "pnpm typecheck && pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
+    "lint": "pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
     "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",

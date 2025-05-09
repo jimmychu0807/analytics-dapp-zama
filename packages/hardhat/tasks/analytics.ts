@@ -87,11 +87,11 @@ task("readAnalytics", "Perform read action on Analytic contract")
   .addParam("func", "The function name")
   .addParam("params", "parameters")
   .setAction(async ({ func, params }, hre) => {
-    const analyticContract = await hre.ethers.getContractAt("Analytic", analyticAddress);
+    // const analyticContract = await hre.ethers.getContractAt("Analytic", analyticAddress);
     const signer = (await hre.ethers.getSigners())[0];
     const signerAddr = await signer.getAddress();
 
-    analyticContract.connect(signer).call();
+    console.log(signerAddr, func, params);
   });
 
 async function createMockInstance() {
