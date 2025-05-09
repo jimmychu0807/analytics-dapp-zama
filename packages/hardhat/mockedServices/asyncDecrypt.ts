@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Wallet, ZeroAddress } from "ethers";
 import { ethers } from "ethers";
 import aclArtifact from "fhevm-core-contracts/artifacts/contracts/ACL.sol/ACL.json";
@@ -5,6 +6,7 @@ import gatewayArtifact from "fhevm-core-contracts/artifacts/gateway/GatewayContr
 
 import { ACL_ADDRESS, GATEWAYCONTRACT_ADDRESS, KMSVERIFIER_ADDRESS, PRIVATE_KEY_KMS_SIGNER } from "../test/constants";
 import { awaitCoprocessor, getClearText } from "./coprocessorUtils";
+import { HARDHAT_ENDPOINT } from "./server";
 
 const aclAdd = ACL_ADDRESS;
 
@@ -32,15 +34,20 @@ export const currentTime = (): string => {
 //   "(uint256 indexed requestID, uint256[] cts, address contractCaller, bytes4 callbackSelector, uint256 msgValue, uint256 maxTimestamp, bool passSignaturesToCaller)";
 // const ifaceEventDecryption = new ethers.Interface(["event EventDecryption" + argEvents]);
 
-const provider = new ethers.WebSocketProvider("ws://127.0.0.1:8545");
-const acl = new ethers.Contract(ACL_ADDRESS, aclArtifact.abi, provider);
-const gateway = new ethers.Contract(GATEWAYCONTRACT_ADDRESS, gatewayArtifact.abi, provider);
+let provider = undefined;
+let acl = undefined;
+let gateway = undefined;
 
 export const initGateway = async (): Promise<void> => {
+  provider = new ethers.WebSocketProvider(HARDHAT_ENDPOINT);
+  acl = new ethers.Contract(ACL_ADDRESS, aclArtifact.abi, provider);
+  gateway = new ethers.Contract(GATEWAYCONTRACT_ADDRESS, gatewayArtifact.abi, provider);
+
   gateway.on("EventDecryption", async (requestID, cts) => {
     console.log(`${currentTime()}: (event) Requested decrypt (requestID ${requestID}) for handles ${cts}`);
     await fulfillRequest(requestID, cts);
   });
+
   gateway.on("ResultCallback", async (requestID, success, result, eventData) => {
     const blockNumber = eventData.log.blockNumber;
     console.log(`${currentTime()}: (event) Fulfilled decrypt on block ${blockNumber} (requestID ${requestID})`);

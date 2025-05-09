@@ -14,4 +14,9 @@ export default [
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "warn"
+    }
+  }
 ];

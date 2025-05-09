@@ -1,3 +1,5 @@
+import { QuestionType } from "./types";
+
 // The ans is one of [0 - 4],
 // e.g. Which L2 chains do you use most?
 //   0. OP Mainnet
@@ -118,3 +120,28 @@ export const statsFixture: [number, number, number][] = [
   [120000, 1, 10],
   [4400000, 0, 35],
 ];
+
+export function newQuestionSpec(
+  text: string,
+  { min, max, options }: { min?: number; max?: number; options?: string[] },
+) {
+  if (Array.isArray(options))
+    return {
+      text,
+      options,
+      min: 0,
+      max: options.length - 1,
+      t: QuestionType.Option,
+    };
+
+  if (min !== undefined && max !== undefined)
+    return {
+      text,
+      options: [],
+      min,
+      max,
+      t: QuestionType.Value,
+    };
+
+  throw new Error("Invalid parameters in newQuestionSpec");
+}

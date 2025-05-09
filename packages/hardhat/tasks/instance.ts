@@ -1,17 +1,17 @@
-import { createInstance as createFhevmInstance } from "fhevmjs";
+import { createInstance as createFhevmInstance } from "fhevmjs/node";
 import { FhevmInstance } from "fhevmjs/node";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { ACL_ADDRESS, GATEWAY_URL, KMSVERIFIER_ADDRESS } from "../test/constants";
 
 const kmsAdd = KMSVERIFIER_ADDRESS;
 const aclAdd = ACL_ADDRESS;
+const localhost = "http://127.0.0.1:8545";
 
-export const createInstance = async (hre: HardhatRuntimeEnvironment): Promise<FhevmInstance> => {
+export const createInstance = async (): Promise<FhevmInstance> => {
   const instance = await createFhevmInstance({
     kmsContractAddress: kmsAdd,
     aclContractAddress: aclAdd,
-    networkUrl: hre.network.config.url,
+    networkUrl: localhost,
     gatewayUrl: GATEWAY_URL,
   });
   return instance;

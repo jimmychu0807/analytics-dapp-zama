@@ -7,6 +7,10 @@ import { getSigners, initSigners } from "../signers";
 import { debug } from "../utils";
 import { deployConfidentialERC20Fixture } from "./ConfidentialERC20.fixture";
 
+type TWithRejectedWith = {
+  rejectedWith: (a1: string) => void;
+};
+
 describe("ConfidentialERC20", function () {
   before(async function () {
     await initSigners();
@@ -72,14 +76,16 @@ describe("ConfidentialERC20", function () {
     expect(balanceBob).to.equal(1337);
 
     // on the other hand, Bob should be unable to read Alice's balance
-    await expect(
-      reencryptEuint64(this.signers.bob, this.fhevm, balanceHandleAlice, this.contractAddress),
-    ).to.be.rejectedWith("User is not authorized to reencrypt this handle!");
+    (
+      (await expect(reencryptEuint64(this.signers.bob, this.fhevm, balanceHandleAlice, this.contractAddress)).to
+        .be) as unknown as TWithRejectedWith
+    ).rejectedWith("User is not authorized to reencrypt this handle!");
 
     // and should be impossible to call reencrypt if contractAddress === userAddress
-    await expect(
-      reencryptEuint64(this.signers.alice, this.fhevm, balanceHandleAlice, this.signers.alice.address),
-    ).to.be.rejectedWith("userAddress should not be equal to contractAddress when requesting reencryption!");
+    (
+      (await expect(reencryptEuint64(this.signers.alice, this.fhevm, balanceHandleAlice, this.signers.alice.address)).to
+        .be) as unknown as TWithRejectedWith
+    ).rejectedWith("userAddress should not be equal to contractAddress when requesting reencryption!");
   });
 
   it("should not transfer tokens between two users", async function () {

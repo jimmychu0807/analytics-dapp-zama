@@ -2,13 +2,14 @@ import { expect } from "chai";
 import { Contract, Log, TransactionReceipt } from "ethers";
 import hre from "hardhat";
 
+import { type Analytic } from "../../types";
 import { awaitAllDecryptionResults, initGateway } from "../asyncDecrypt";
 import { getFHEGasFromTxReceipt } from "../coprocessorUtils";
 import { createInstance } from "../instance";
 import { reencryptEuint32 } from "../reencrypt";
 import { getSigners, initSigners } from "../signers";
-import { countFixture, statsFixture } from "./fixtures";
-import { PredicateOp, QuestionType } from "./types";
+import { countFixture, newQuestionSpec, statsFixture } from "./helpers";
+import { PredicateOp } from "./types";
 
 describe("Analytic", function () {
   before(async function () {
@@ -108,7 +109,7 @@ describe("Analytic", function () {
         QuestionSpecLib: this.libAddress,
       },
     });
-    this.analyticContract = await contractFactory.connect(this.signers.alice).deploy();
+    this.analyticContract = (await contractFactory.connect(this.signers.alice).deploy()) as Analytic;
     await this.analyticContract.waitForDeployment();
     this.contractAddress = await this.analyticContract.getAddress();
 
@@ -237,7 +238,7 @@ describe("Analytic", function () {
 
     testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
 
-    const result = await this.analyticContract.getQueryResult(reqId);
+    const result = await (this.analyticContract as Analytic).getQueryResult(reqId);
     const decryptedRes = await Promise.all(
       result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
     );
@@ -292,7 +293,7 @@ describe("Analytic", function () {
     }
 
     // Read the value back with reencryption
-    const result = await this.analyticContract.getQueryResult(reqId);
+    const result = await (this.analyticContract as Analytic).getQueryResult(reqId);
     const decryptedRes = await Promise.all(
       result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
     );
@@ -350,7 +351,7 @@ describe("Analytic", function () {
     }
 
     // Read the value back with reencryption
-    const result = await this.analyticContract.getQueryResult(reqId);
+    const result = await (this.analyticContract as Analytic).getQueryResult(reqId);
     const decryptedRes = await Promise.all(
       result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
     );
@@ -391,7 +392,7 @@ describe("Analytic", function () {
 
     testEventArgs(this.analyticContract, receipt.logs, "QueryExecutionCompleted", [reqId]);
 
-    const result = await this.analyticContract.getQueryResult(reqId);
+    const result = await (this.analyticContract as Analytic).getQueryResult(reqId);
     const decryptedRes = await Promise.all(
       result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
     );
@@ -443,7 +444,7 @@ describe("Analytic", function () {
       }
     }
 
-    const result = await this.analyticContract.getQueryResult(reqId);
+    const result = await (this.analyticContract as Analytic).getQueryResult(reqId);
     const decryptedRes = await Promise.all(
       result.acc.map((h) => reencryptEuint32(this.signers.alice, this.fhevm, h, this.contractAddress)),
     );
@@ -464,25 +465,3 @@ describe("Analytic", function () {
     expect(result.ttlAnsCount).to.equal(ansLen);
   });
 });
-
-function newQuestionSpec(text: string, { min, max, options }: { min?: number; max?: number; options?: string[] }) {
-  if (Array.isArray(options))
-    return {
-      text,
-      options,
-      min: 0,
-      max: options.length - 1,
-      t: QuestionType.Option,
-    };
-
-  if (min !== undefined && max !== undefined)
-    return {
-      text,
-      options: [],
-      min,
-      max,
-      t: QuestionType.Value,
-    };
-
-  throw new Error("Invalid parameters in newQuestionSpec");
-}

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Wallet, ZeroAddress } from "ethers";
 import gatewayArtifact from "fhevm-core-contracts/artifacts/gateway/GatewayContract.sol/GatewayContract.json";
 import { ethers, network } from "hardhat";

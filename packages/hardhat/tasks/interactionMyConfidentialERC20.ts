@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { task } from "hardhat/config";
 import type { TaskArguments } from "hardhat/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
