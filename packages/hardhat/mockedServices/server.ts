@@ -16,7 +16,9 @@ import {
 import { currentTime, initGateway } from "./asyncDecrypt";
 import { awaitCoprocessor, getClearText, insertSQL } from "./coprocessorUtils";
 
-const HARDHAT_ENDPOINT = "http://127.0.0.1:8545";
+const mockedServerPort = process.env.MOCKED_SERVER_PORT ?? 3000;
+export const HARDHAT_ENDPOINT = "http://127.0.0.1:8545";
+
 const provider = new JsonRpcProvider(HARDHAT_ENDPOINT);
 
 enum Types {
@@ -60,7 +62,6 @@ type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
 const app = express();
 app.use(cors());
 app.use(express.json());
-const port = 3000;
 
 app.get("/ping", async (req: Request, res: Response<ApiResponse>) => {
   console.log(`${currentTime()}: GET /ping`);
@@ -90,7 +91,7 @@ app.post("/get-clear-text", async (req: Request, res: Response<ApiResponse>) => 
     } catch (error) {
       return res.status(400).json({
         status: "error",
-        message: `Invalid bigint format: ${error.toString()}`,
+        message: `Invalid bigint format: ${(error as Error).toString()}`,
       });
     }
 
@@ -427,9 +428,10 @@ async function kmsSign(
   return result;
 }
 
-app.listen(port, async () => {
-  await waitOn({ delay: 500, timeout: 30000, resources: [HARDHAT_ENDPOINT] });
+app.listen(mockedServerPort, async () => {
+  await waitOn({ timeout: 60000, resources: [HARDHAT_ENDPOINT] });
 
-  console.log(`⚙️ Server running at http://localhost:${port}`);
+  console.log(`⚙️ Server running at http://localhost:${mockedServerPort}`);
+
   await initGateway();
 });

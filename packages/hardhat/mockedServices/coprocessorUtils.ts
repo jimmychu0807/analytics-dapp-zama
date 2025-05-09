@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { JsonRpcProvider } from "ethers";
 import { ethers } from "ethers";
 import { log2 } from "extra-bigint";

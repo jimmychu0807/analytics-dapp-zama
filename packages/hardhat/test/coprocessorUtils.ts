@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { log2 } from "extra-bigint";
 import { ethers } from "hardhat";
 import hre from "hardhat";

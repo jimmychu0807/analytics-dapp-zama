@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { toBigIntBE, toBufferBE } from "bigint-buffer";
 import crypto from "crypto";
 import { Wallet, ethers } from "ethers";

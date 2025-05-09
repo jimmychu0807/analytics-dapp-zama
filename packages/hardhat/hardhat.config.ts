@@ -1,5 +1,4 @@
 import "@nomicfoundation/hardhat-toolbox";
-import { spawn } from "child_process";
 import dotenv from "dotenv";
 import "hardhat-deploy";
 import "hardhat-ignore-warnings";
@@ -10,6 +9,7 @@ import type { NetworkUserConfig } from "hardhat/types";
 import CustomProvider from "./CustomProvider";
 // Adjust the import path as needed
 import "./tasks/accounts";
+import "./tasks/analytics";
 import "./tasks/etherscanVerify";
 import "./tasks/interactionMyConfidentialERC20";
 import { setCodeMocked } from "./test/mockedSetup";
@@ -26,7 +26,7 @@ const mnemonic: string = process.env.MNEMONIC!;
 
 const chainIds = {
   zama: 8009,
-  local: 9000,
+  localhost: 31337,
   localCoprocessor: 12345,
   sepolia: 11155111,
   // To make metamask compatible with hardhat node
@@ -37,7 +37,7 @@ const chainIds = {
 function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
   let jsonRpcUrl: string;
   switch (chain) {
-    case "local":
+    case "localhost":
       jsonRpcUrl = "http://localhost:8545";
       break;
     case "localCoprocessor":
@@ -79,15 +79,8 @@ task("test", async (_taskArgs, hre, runSuper) => {
 });
 
 task("node", async (_taskArgs, hre, runSuper) => {
+  console.log("Configuring mocked service code...");
   await setCodeMocked(hre);
-  const server = spawn("ts-node", ["--transpile-only", "mockedServices/server.ts"], {
-    stdio: "inherit",
-  });
-
-  process.on("SIGINT", () => {
-    server.kill();
-    process.exit(0);
-  });
   await runSuper();
 });
 
@@ -103,7 +96,6 @@ const config: HardhatUserConfig = {
     currency: "USD",
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: [],
-    src: "./contracts",
   },
   networks: {
     hardhat: {
@@ -118,8 +110,7 @@ const config: HardhatUserConfig = {
     },
     sepolia: getChainConfig("sepolia"),
     zama: getChainConfig("zama"),
-    localDev: getChainConfig("local"),
-    local: getChainConfig("local"),
+    localhost: getChainConfig("localhost"),
     localCoprocessor: getChainConfig("localCoprocessor"),
   },
   paths: {

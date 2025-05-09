@@ -12,9 +12,10 @@
   "scripts": {
     "dev": "hardhat node --tags Analytic",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
-    "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat compile",
+    "compile": "hardhat compile",
+    "mocked-server": "tsx mockedServices/server.ts ",
     "typecheck": "tsc --noEmit",
-    "lint": "pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
+    "lint": "pnpm typecheck && pnpm lint:sol && pnpm lint:ts && pnpm prettier:check",
     "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",
@@ -22,7 +23,7 @@
     "postinstall": "pnpm typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
-    "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
+    "typechain": "hardhat typechain",
     "test": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
     "test:all": "REPORT_GAS=true hardhat test --network hardhat",
     "coverage": "hardhat coverage",
@@ -39,10 +40,12 @@
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.4",
+    "@types/cors": "^2.8.18",
     "@types/eslint__js": "^8.42.3",
     "@types/fs-extra": "^9.0.13",
     "@types/mocha": "^10.0.0",
     "@types/node": "^18.19.59",
+    "@types/wait-on": "^5.3.4",
     "@typescript-eslint/eslint-plugin": "^8.0.1",
     "@typescript-eslint/parser": "^8.0.1",
     "bigint-buffer": "^1.1.5",
@@ -79,6 +82,7 @@
     "sqlite3": "^5.1.7",
     "ts-generator": "^0.1.1",
     "ts-node": "^10.9.1",
+    "tsx": "catalog:",
     "typechain": "^8.2.0",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.0.1",
@@ -103,7 +107,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.2"
+    "@openzeppelin/contracts": "^5.0.2",
+    "@types/express": "^5.0.1"
   },
   "packageManager": "pnpm@10.8.0+sha512.0e82714d1b5b43c74610193cb20734897c1d00de89d0e18420aebc5977fa13d780a9cb05734624e81ebd81cc876cd464794850641c48b9544326b5622ca29971"
 }

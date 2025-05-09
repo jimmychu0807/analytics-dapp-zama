@@ -1,4 +1,4 @@
-import { ZeroAddress } from "ethers";
+import { Wallet, ZeroAddress } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
@@ -12,6 +12,18 @@ import {
 } from "./constants";
 
 const OneAddress = "0x0000000000000000000000000000000000000001";
+
+type objWithInitializeFunc = {
+  initialize: (a1: string) => Promise<unknown>;
+};
+
+type objWithAddSignerFunc = {
+  addSigner: (w: Wallet) => Promise<unknown>;
+};
+
+type objWithAddRelayerFunc = {
+  addRelayer: (s1: string) => Promise<unknown>;
+};
 
 export async function setCodeMocked(hre: HardhatRuntimeEnvironment) {
   const aclArtifact = await import("fhevm-core-contracts/artifacts/contracts/ACL.sol/ACL.json");
@@ -42,12 +54,15 @@ export async function setCodeMocked(hre: HardhatRuntimeEnvironment) {
   const one = await impersonateAddress(hre, OneAddress, hre.ethers.parseEther("100"));
   const kmsSigner = new hre.ethers.Wallet(PRIVATE_KEY_KMS_SIGNER);
   const kms = await hre.ethers.getContractAt(kmsArtifact.abi, KMSVERIFIER_ADDRESS);
-  await kms.connect(zero).initialize(OneAddress);
-  await kms.connect(one).addSigner(kmsSigner);
+
+  await (kms.connect(zero) as unknown as objWithInitializeFunc).initialize(OneAddress);
+  await (kms.connect(one) as unknown as objWithAddSignerFunc).addSigner(kmsSigner);
+
   const input = await hre.ethers.getContractAt(inputArtifact.abi, INPUTVERIFIER_ADDRESS);
-  await input.connect(zero).initialize(OneAddress);
+  await (input.connect(zero) as unknown as objWithInitializeFunc).initialize(OneAddress);
+
   const gateway = await hre.ethers.getContractAt(gatewayArtifact.abi, GATEWAYCONTRACT_ADDRESS);
-  await gateway.connect(zero).addRelayer(ZeroAddress);
+  await (gateway.connect(zero) as unknown as objWithAddRelayerFunc).addRelayer(ZeroAddress);
 }
 
 export async function impersonateAddress(hre: HardhatRuntimeEnvironment, address: string, amount: bigint) {

@@ -15,16 +15,16 @@ task("verify-deployed", "Verifies an already deployed contract on Etherscan")
     console.info("Address:", address);
 
     try {
-      // Parse constructor arguments
+      // Parse constructr arguments
       const constructorArgs = args
-        ? args.split(",").map((arg) => {
+        ? args.split(",").map((arg: string) => {
             const trimmed = arg.trim();
             // Try to parse as JSON
             try {
               return JSON.parse(trimmed);
             } catch {
               // If it's a number
-              if (!isNaN(trimmed)) {
+              if (!isNaN(Number(trimmed))) {
                 return Number(trimmed);
               }
               // If it's a boolean
@@ -49,7 +49,8 @@ task("verify-deployed", "Verifies an already deployed contract on Etherscan")
       await hre.run("verify:verify", verificationArgs);
 
       console.info("\n✅ Contract verification completed successfully!");
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       if (error.message.includes("Already Verified")) {
         console.info("\n✓ Contract is already verified!");
       } else {

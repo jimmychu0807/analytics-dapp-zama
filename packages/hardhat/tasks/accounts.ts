@@ -1,6 +1,9 @@
+import dotenv from "dotenv";
 import { task, types } from "hardhat/config";
 
 import { ACCOUNT_NAMES } from "../test/constants";
+
+dotenv.config();
 
 task("get-accounts", "Prints the list of accounts")
   .addParam("numAccounts", "Number of accounts to return (1-10)", 3, types.int)
@@ -13,7 +16,7 @@ task("get-accounts", "Prints the list of accounts")
     // Get signers from hardhat
     const signers = await hre.ethers.getSigners();
     const accounts = [];
-    const { mnemonic } = hre.network.config.accounts;
+    const mnemonic = process.env.MNEMONIC || "";
 
     // Get details for specified number of accounts
     for (let i = 0; i < numAccounts && i < signers.length; i++) {

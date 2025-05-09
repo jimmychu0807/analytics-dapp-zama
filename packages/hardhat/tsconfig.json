@@ -19,7 +19,7 @@
     "noUnusedLocals": true,
     "noFallthroughCasesInSwitch": true
   },
+  "include": ["mockedServices/**/*", "tasks/**/*", "test/**/*", "deploy/**/*", "types/"],
   "exclude": ["node_modules"],
-  "include": ["src/**/*", "tasks/**/*", "test/**/*", "deploy/**/*", "types/"],
   "files": ["./hardhat.config.ts"]
 }
