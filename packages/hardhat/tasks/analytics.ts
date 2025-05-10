@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
-import { createEIP712, generateKeypair } from "fhevmjs/node";
+import { type TransactionReceipt, hexlify } from "ethers";
 import { task, types } from "hardhat/config";
 import { type HardhatRuntimeEnvironment } from "hardhat/types";
-import AnalyticJSON from "../artifacts/contracts/Analytic.sol/Analytic.json";
-import { type TransactionReceipt, hexlify } from "ethers";
 
+import AnalyticJSON from "../artifacts/contracts/Analytic.sol/Analytic.json";
+import { getMockedFhevm } from "../mockedServices/client";
 import { newQuestionSpec } from "../test/analytic/helpers";
 
 dotenv.config();
@@ -16,6 +16,12 @@ const AnalyticContract = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const questions: Record<string, any> = {
+  "simple": {
+    main: newQuestionSpec("Which L2 chains do you use most?", {
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
+    }),
+    metas: []
+  },
   "l2-usage": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
@@ -29,6 +35,10 @@ const questions: Record<string, any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const answers: Record<string, any> = {
+  "simple": [
+    [0], [0], [1], [2], [3],
+    [0], [0], [1], [2], [3],
+  ],
   "l2-usage": [
     [0, 0, 20],
     [1, 1, 30],
@@ -56,25 +66,25 @@ task("analytics:new-question", "Load a new question to the Analytic contract")
     const tx = await analyticContract.newQuestion(main, metas, currentTS, endTS, queryThreshold);
     const receipt = await tx.wait();
 
-    const events = parseReceiptEvents(receipt!, hre);
-    events.forEach(ev => console.log(`${ev.name}`, ev.args));
+    parseReceiptEvents(receipt!, hre);
   });
 
 task("analytics:answer", "Answer a particular question")
-  .addParam("qId", "Question ID", 0, types.int)
+  .addPositionalParam("qId", "Question ID", 0, types.int)
   .addParam("type", "question type", "l2-usage", types.string)
-  .addParam("ansStartIdx", "start index of answer fixtures", 0, types.int)
-  .addParam("ansNum", "number of answers", 1, types.int)
-  .setAction(async ({ qId, type, ansStartIdx, ansNum }, hre) => {
+  .addParam("start", "start index of answer fixtures", 0, types.int)
+  .addParam("num", "number of answers", 1, types.int)
+  .setAction(async ({ qId, type, start, num }, hre) => {
     if (!answers[type]) throw new Error("Answer type does not exist.");
+    if (num < 1) throw new Error("parameter `num` has to be greater than 0");
 
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
 
-    const signers = (await hre.ethers.getSigners()).slice(ansStartIdx, ansNum);
+    const signers = (await hre.ethers.getSigners()).slice(start, start + num);
     const signerAddrs = await Promise.all(signers.map((s) => s.getAddress()));
 
-    const fhevm = await createMockInstance();
-    const loadedAns = answers[type].slice(ansStartIdx, ansNum);
+    const fhevm = getMockedFhevm();
+    const loadedAns = answers[type].slice(start, start + num);
 
     for (let idx = 0; idx < loadedAns.length; idx++) {
       const ans = loadedAns[idx];
@@ -93,38 +103,31 @@ task("analytics:answer", "Answer a particular question")
         .answer(qId, inputStrs.handles[0], inputStrs.handles.slice(1), inputStrs.inputProof);
       const receipt = await tx.wait();
 
-      const events = parseReceiptEvents(receipt!, hre);
-      events.forEach(ev => console.log(`${ev.name}`, ev.args));
+      console.log(`submitted ${idx + 1}/${loadedAns.length}`)
+      parseReceiptEvents(receipt!, hre);
+
+      // sleep before running the next iteration
+      if (idx !== loadedAns.length - 1) await sleep(600);
     }
   });
 
 task("analytics:read", "Perform read action on Analytic contract")
-  .addParam("func", "The function name")
-  .addParam("params", "parameters")
+  .addPositionalParam("func", "The read function name")
+  .addPositionalParam("params", "parameters")
   .setAction(async ({ func, params }, hre) => {
-    // const analyticContract = await hre.ethers.getContractAt("Analytic", analyticAddress);
     const signer = (await hre.ethers.getSigners())[0];
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
-    const paramObj = JSON.parse(params);
-    const result = await analyticContract.connect(signer)[func](...paramObj);
+
+    if (!func || func.trim().length === 0) throw Error("read function is not defined");
+    const paramObj = params ? JSON.parse(params) : [];
+
+    // @ts-expect-error: figure out correct types for dynamically calling the smart contract function
+    const result = await analyticContract.connect(signer)[func as string](...paramObj);
 
     console.log(result);
   });
 
-async function createMockInstance() {
-  const { createEncryptedInputMocked, reencryptRequestMocked } = await import("../test/fhevmjsMocked");
-  const instance = {
-    reencrypt: reencryptRequestMocked,
-    createEncryptedInput: createEncryptedInputMocked,
-    getPublicKey: () => "0xFFAA44433",
-    generateKeypair: generateKeypair,
-    createEIP712: createEIP712(31337),
-  };
-
-  return instance;
-}
-
-function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment) {
+function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment, bPrint: boolean = true) {
   const events = [];
   const iface = new hre.ethers.Interface(AnalyticContract.abi);
 
@@ -132,5 +135,14 @@ function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvi
     const event = iface.parseLog(log);
     if (event) events.push(event);
   }
+
+  if (bPrint) {
+    events.forEach((ev) => console.log(`${ev.name}`, ev.args));
+  }
+
   return events;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

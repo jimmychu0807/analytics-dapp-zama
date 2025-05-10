@@ -44,20 +44,23 @@ export const initGateway = async (): Promise<void> => {
   gateway = new ethers.Contract(GATEWAYCONTRACT_ADDRESS, gatewayArtifact.abi, provider);
 
   gateway.on("EventDecryption", async (requestID, cts) => {
-    console.log(`${currentTime()}: (event) Requested decrypt (requestID ${requestID}) for handles ${cts}`);
+    console.log(`${currentTime()}: (event) Request decrypt (requestID: ${requestID}) for handles ${cts}`);
     await fulfillRequest(requestID, cts);
   });
 
   gateway.on("ResultCallback", async (requestID, success, result, eventData) => {
     const blockNumber = eventData.log.blockNumber;
-    console.log(`${currentTime()}: (event) Fulfilled decrypt on block ${blockNumber} (requestID ${requestID})`);
+    console.log(`${currentTime()}: (event) Fulfill decrypt (requestID: ${requestID}) on block ${blockNumber}`);
   });
 };
 
 const allTrue = (arr: boolean[], fn = Boolean) => arr.every(fn);
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 const fulfillRequest = async (requestID: bigint, handles: bigint[]) => {
-  console.log(`${currentTime()}: fulfillRequest() called.`);
+  console.log(`${currentTime()}: fulfillRequest(requestID: ${requestID}) called`);
 
   try {
     await awaitCoprocessor();
@@ -89,18 +92,26 @@ const fulfillRequest = async (requestID: bigint, handles: bigint[]) => {
 
     const numSigners = 1; // for the moment mocked mode only uses 1 signer
     const decryptResultsEIP712signatures = await computeDecryptSignatures(handles, calldata, numSigners);
+
     await provider.send("hardhat_impersonateAccount", [ZeroAddress]);
     const impersonatedSigner = new ethers.JsonRpcSigner(provider, ZeroAddress);
 
     const tx = await gateway
       .connect(impersonatedSigner)
       .fulfillRequest(requestID, calldata, decryptResultsEIP712signatures);
-    await tx.wait();
+
+    // note: Manually mine blocks in hardhat node until the transaction is included
+    await sleep(300);
+    while (await tx.confirmations() < 1) {
+      await provider.send("evm_mine");
+      await sleep(300);
+    }
+
     await provider.send("hardhat_stopImpersonatingAccount", [ZeroAddress]);
 
     const blockNumber = await provider.send("eth_blockNumber", []);
     console.log(
-      `${currentTime()}: fulfillRequest() completed. Gateway sent decryption result in callback tx succesfully for requestID ${requestID} on block #: ${blockNumber}`,
+      `${currentTime()}: fulfillRequest(requestID: ${requestID}) completed. Gateway sent decryption result in callback tx succesfully on block ${parseInt(blockNumber)}`,
     );
   } catch (err) {
     console.error(`${currentTime()}: fulfillRequest() error:`, err);
