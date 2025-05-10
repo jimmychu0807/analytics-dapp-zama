@@ -15,14 +15,35 @@ const AnalyticContract = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// prettier-ignore
 const questions: Record<string, any> = {
-  "simple": {
+  "opt": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
     metas: []
   },
-  "l2-usage": {
+  "val": {
+    main: newQuestionSpec("Your age", { min: 18, max: 150 }),
+    metas: []
+  },
+  "opt-1opt": {
+    main: newQuestionSpec("Which L2 chains do you use most?", {
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
+    }),
+    metas: [
+      newQuestionSpec("Your gender", { options: ["Male", "Female"] }),
+    ]
+  },
+  "val-1val": {
+    main: newQuestionSpec("What is your annual salary?", {
+      min: 0, max: 1000000000,
+    }),
+    metas: [
+      newQuestionSpec("Your age", { min: 18, max: 150 })
+    ]
+  },
+  "opt-1opt1val": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
@@ -34,12 +55,25 @@ const questions: Record<string, any> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// prettier-ignore
 const answers: Record<string, any> = {
-  "simple": [
-    [0], [0], [1], [2], [3],
-    [0], [0], [1], [2], [3],
+  "opt": [
+    [0], [1], [2], [3], [0],
+    [1], [2], [3], [0], [1],
   ],
-  "l2-usage": [
+  "val": [
+    [20], [25], [30], [35], [40],
+    [45], [50], [55], [60], [65],
+  ],
+  "opt-1opt": [
+    [0, 0], [1, 1], [2, 0], [3, 1], [0, 0],
+    [1, 0], [2, 1], [3, 0], [0, 1], [1, 0],
+  ],
+  "val-1val": [
+    [50000, 20], [60000, 24], [70000, 26], [80000, 28], [110000, 29],
+    [150000, 30], [160000, 34], [170000, 36], [180000, 38], [210000, 39],
+  ],
+  "opt-1opt1val": [
     [0, 0, 20],
     [1, 1, 30],
     [2, 1, 40],
@@ -49,7 +83,7 @@ const answers: Record<string, any> = {
 };
 
 task("analytics:new-question", "Load a new question to the Analytic contract")
-  .addParam("type", "Question type (l2-usage)", "l2-usage", types.string)
+  .addParam("type", "Question type (opt)", "opt", types.string)
   .setAction(async ({ type }, hre) => {
     if (!questions[type]) throw new Error("Question type does not exist.");
 
@@ -71,7 +105,7 @@ task("analytics:new-question", "Load a new question to the Analytic contract")
 
 task("analytics:answer", "Answer a particular question")
   .addPositionalParam("qId", "Question ID", 0, types.int)
-  .addParam("type", "question type", "l2-usage", types.string)
+  .addParam("type", "question type", "opt", types.string)
   .addParam("start", "start index of answer fixtures", 0, types.int)
   .addParam("num", "number of answers", 1, types.int)
   .setAction(async ({ qId, type, start, num }, hre) => {
