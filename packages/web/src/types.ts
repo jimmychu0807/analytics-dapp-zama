@@ -12,6 +12,8 @@ export enum PredicateOp {
   LE,
 }
 
+export const PredicateStrs = ["= (eq)", "≠ (ne)", "≥ (gte)", "≤ (lte)"];
+
 export enum QuestionState {
   Initialized,
   Open,

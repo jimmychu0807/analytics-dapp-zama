@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { useFhevm } from "@/contexts/FhevmContext";
-import { type QuestionSet, type QueryResult, type QueryRequest, QuestionType } from "@/types";
+import {
+  type QuestionSet,
+  type QueryResult,
+  type QueryRequest,
+  QuestionType,
+  PredicateStrs,
+} from "@/types";
 import { formatPercent, formatNumber } from "@/utils";
 import { getAndClearQueryResult } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
@@ -22,8 +28,6 @@ export function QueryResultDialog({
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const config = useConfig();
-
-  const compareActions = ["= (eq)", "≠ (ne)", "≥ (gte)", "≤ (lte)"];
 
   const openQueryResultDialog = async () => {
     setDialogOpen(true);
@@ -66,7 +70,7 @@ export function QueryResultDialog({
                   queryRequest.predicates.map((predicate, i) => (
                     <div key={`pred-${i}`} className="text-sm text-gray-800 font-semibold">
                       <span>{questionSet.metas[predicate.metaOpt].text}</span>&nbsp;
-                      <span>{compareActions[predicate.op]}</span>&nbsp;
+                      <span>{PredicateStrs[predicate.op]}</span>&nbsp;
                       <span>
                         {questionSet.metas[predicate.metaOpt].t === QuestionType.Option
                           ? questionSet.metas[predicate.metaOpt].options[predicate.metaVal]
