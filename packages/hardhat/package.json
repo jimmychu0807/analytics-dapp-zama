@@ -24,8 +24,10 @@
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "hardhat typechain",
-    "test": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
-    "test:all": "REPORT_GAS=true hardhat test --network hardhat",
+    "test": "hardhat test --network hardhat test/analytic/Analytic.test.ts",
+    "test:reportGas": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
+    "test:all": "hardhat test --network hardhat",
+    "test:all-reportGas": "REPORT_GAS=true hardhat test --network hardhat",
     "coverage": "hardhat coverage",
     "deploy-sepolia": "hardhat deploy --network sepolia"
   },
