@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { type QuestionSpec, type QuestionSet, QuestionType } from "@/types";
+import { type QuestionSpec, type QuestionSet, QuestionType, PredicateStrs } from "@/types";
 import { maxPredicates, parseFormDataIntoQueryRequestObj } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop, Select, Input } from "@headlessui/react";
@@ -120,8 +120,6 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
     setSelectedMeta(questionSet.metas[idx]);
   };
 
-  const compareActions = ["== (equal)", "!= (not equal)", "> (greater than)", "< (less than)"];
-
   const selectInputClasses = clsx(
     "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
     "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-black/25",
@@ -157,7 +155,7 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
       <div className="relative">
         <Select className={selectInputClasses} name={`${prefix}-op`} defaultValue="" required>
           <option value="" hidden></option>
-          {compareActions.map((action, idx) => (
+          {PredicateStrs.map((action, idx) => (
             <option key={idx} value={idx}>
               {action}
             </option>

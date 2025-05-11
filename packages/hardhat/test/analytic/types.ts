@@ -6,6 +6,6 @@ export enum QuestionType {
 export enum PredicateOp {
   EQ,
   NE,
-  GT,
-  LT,
+  GE,
+  LE,
 }

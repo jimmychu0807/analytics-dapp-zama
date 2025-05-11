@@ -8,9 +8,11 @@ export enum QuestionType {
 export enum PredicateOp {
   EQ,
   NE,
-  GT,
-  LT,
+  GE,
+  LE,
 }
+
+export const PredicateStrs = ["= (eq)", "≠ (ne)", "≥ (gte)", "≤ (lte)"];
 
 export enum QuestionState {
   Initialized,

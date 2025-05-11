@@ -10,10 +10,10 @@
     "url": "https://jimmychu0807.hk"
   },
   "scripts": {
-    "dev": "hardhat node --tags Analytic",
+    "dev": "concurrently --names 'hardhat,mocked-server' --prefix '[{name}]' \"pnpm hardhat node --tags Analytic\" \"pnpm mock-server\"",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
     "compile": "hardhat compile",
-    "mocked-server": "tsx mockedServices/server.ts ",
+    "mock-server": "tsx mockedServices/server.ts ",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm lint:sol && pnpm typecheck && pnpm lint:ts && pnpm prettier:check",
     "lint:fix": "pnpm lint:ts:fix && pnpm prettier:write",
@@ -24,8 +24,10 @@
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "hardhat typechain",
-    "test": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
-    "test:all": "REPORT_GAS=true hardhat test --network hardhat",
+    "test": "hardhat test --network hardhat test/analytic/Analytic.test.ts",
+    "test:reportGas": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
+    "test:all": "hardhat test --network hardhat",
+    "test:all-reportGas": "REPORT_GAS=true hardhat test --network hardhat",
     "coverage": "hardhat coverage",
     "deploy-sepolia": "hardhat deploy --network sepolia"
   },
@@ -51,6 +53,7 @@
     "@typescript-eslint/parser": "^8.0.1",
     "bigint-buffer": "^1.1.5",
     "chai": "^4.3.7",
+    "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
     "dotenv": "catalog:",

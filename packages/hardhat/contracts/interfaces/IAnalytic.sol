@@ -14,8 +14,8 @@ interface IAnalytic {
     enum PredicateOp {
         EQ,
         NE,
-        GT,
-        LT
+        GE,
+        LE
     }
 
     enum RequestState {
@@ -70,6 +70,7 @@ interface IAnalytic {
     error InvalidQuestionMetaParam(string reason);
     error InvalidQuestion(uint64 qId);
     error QuestionClosed(uint64 qId);
+    error QuestionNotOpen(uint64 qId);
     error AlreadyAnswered(uint64 qId, address sender);
     error MetaAnswerNumberNotMatch(uint64 qId, uint256 metaAnsLen, uint256 metaOptLen);
     error RejectAnswer(uint64 qId, address sender);
