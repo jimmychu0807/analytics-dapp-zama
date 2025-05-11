@@ -15,33 +15,29 @@ const AnalyticContract = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// prettier-ignore
 const questions: Record<string, any> = {
-  "opt": {
+  opt: {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
-    metas: []
+    metas: [],
   },
-  "val": {
+  val: {
     main: newQuestionSpec("Your age", { min: 18, max: 150 }),
-    metas: []
+    metas: [],
   },
   "opt-1opt": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
-    metas: [
-      newQuestionSpec("Your gender", { options: ["Male", "Female"] }),
-    ]
+    metas: [newQuestionSpec("Your gender", { options: ["Male", "Female"] })],
   },
   "val-1val": {
     main: newQuestionSpec("What is your annual salary?", {
-      min: 0, max: 1000000000,
+      min: 0,
+      max: 1000000000,
     }),
-    metas: [
-      newQuestionSpec("Your age", { min: 18, max: 150 })
-    ]
+    metas: [newQuestionSpec("Your age", { min: 18, max: 150 })],
   },
   "opt-1opt1val": {
     main: newQuestionSpec("Which L2 chains do you use most?", {
@@ -55,23 +51,32 @@ const questions: Record<string, any> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// prettier-ignore
 const answers: Record<string, any> = {
-  "opt": [
-    [0], [1], [2], [3], [0],
-    [1], [2], [3], [0], [1],
-  ],
-  "val": [
-    [20], [25], [30], [35], [40],
-    [45], [50], [55], [60], [65],
-  ],
+  opt: [[0], [1], [2], [3], [0], [1], [2], [3], [0], [1]],
+  val: [[20], [25], [30], [35], [40], [45], [50], [55], [60], [65]],
   "opt-1opt": [
-    [0, 0], [1, 1], [2, 0], [3, 1], [0, 0],
-    [1, 0], [2, 1], [3, 0], [0, 1], [1, 0],
+    [0, 0],
+    [1, 1],
+    [2, 0],
+    [3, 1],
+    [0, 0],
+    [1, 0],
+    [2, 1],
+    [3, 0],
+    [0, 1],
+    [1, 0],
   ],
   "val-1val": [
-    [50000, 20], [60000, 24], [70000, 26], [80000, 28], [110000, 29],
-    [150000, 30], [160000, 34], [170000, 36], [180000, 38], [210000, 39],
+    [50000, 20],
+    [60000, 24],
+    [70000, 26],
+    [80000, 28],
+    [110000, 29],
+    [150000, 30],
+    [160000, 34],
+    [170000, 36],
+    [180000, 38],
+    [210000, 39],
   ],
   "opt-1opt1val": [
     [0, 0, 20],
@@ -137,7 +142,7 @@ task("analytics:answer", "Answer a particular question")
         .answer(qId, inputStrs.handles[0], inputStrs.handles.slice(1), inputStrs.inputProof);
       const receipt = await tx.wait();
 
-      console.log(`submitted ${idx + 1}/${loadedAns.length}`)
+      console.log(`submitted ${idx + 1}/${loadedAns.length}`);
       parseReceiptEvents(receipt!, hre);
 
       // sleep before running the next iteration
@@ -147,13 +152,13 @@ task("analytics:answer", "Answer a particular question")
 
 task("analytics:read", "Perform read action on Analytic contract")
   .addPositionalParam("func", "The read function name")
-  .addPositionalParam("params", "parameters")
+  .addPositionalParam("params", "parameters", "")
   .setAction(async ({ func, params }, hre) => {
     const signer = (await hre.ethers.getSigners())[0];
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
 
     if (!func || func.trim().length === 0) throw Error("read function is not defined");
-    const paramObj = params ? JSON.parse(params) : [];
+    const paramObj = params ? JSON.parse(`[${params}]`) : [];
 
     // @ts-expect-error: figure out correct types for dynamically calling the smart contract function
     const result = await analyticContract.connect(signer)[func as string](...paramObj);
@@ -178,5 +183,5 @@ function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvi
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

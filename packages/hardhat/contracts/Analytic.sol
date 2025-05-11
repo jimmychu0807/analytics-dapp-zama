@@ -36,6 +36,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         if (question.state == QuestionState.Closed) revert QuestionClosed(qId);
         if (block.timestamp > question.endTime) revert QuestionClosed(qId);
+        if (block.timestamp < question.startTime) revert QuestionNotOpen(qId);
         _;
     }
 
@@ -164,11 +165,15 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         // Check the encrypted input and put result in eValid.
         // Later on we will decrypt this value to check the validity
         euint32 eAns = TFHE.asEuint32(ans, inputProof);
+        TFHE.allowThis(eAns);
+
         ebool eValid = TFHE.and(TFHE.ge(eAns, question.main.min), TFHE.le(eAns, question.main.max));
 
         euint32[] memory eMetaAns = new euint32[](metaAns.length);
         for (uint256 mIdx = 0; mIdx < metaAns.length; ++mIdx) {
             eMetaAns[mIdx] = TFHE.asEuint32(metaAns[mIdx], inputProof);
+            TFHE.allowThis(eMetaAns[mIdx]);
+
             eValid = TFHE.and(
                 eValid,
                 TFHE.and(
@@ -193,11 +198,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         addParamsUint256(reqId, uint256(qId));
         addParamsAddress(reqId, msg.sender);
         addParamsEUint32(reqId, eAns);
-        TFHE.allowThis(eAns);
-
         for (uint256 mIdx = 0; mIdx < eMetaAns.length; ++mIdx) {
             addParamsEUint32(reqId, eMetaAns[mIdx]);
-            TFHE.allowThis(eMetaAns[mIdx]);
         }
     }
 
@@ -211,16 +213,21 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
         // valid Answer
         euint32[] memory params = getParamsEUint32(reqId);
+
+        console.log("qId: %s, param len: %s", qId, params.length);
+
         euint32[] memory metaVals = new euint32[](params.length - 1);
-        for (uint256 i = 0; i < params.length - 1; i++) {
-            metaVals[i] = params[i + 1];
+        for (uint256 i = 1; i < params.length; i++) {
+            metaVals[i - 1] = params[i];
         }
 
         Answer memory ans = Answer({ val: params[0], metaVals: metaVals });
-
         questionAnswers[qId].push(ans);
         hasAnswered[qId][sender] = true;
+        console.log("answer len: %s", questionAnswers[qId].length);
+
         emit ConfirmAnswer(qId, sender);
+        console.log("emit event");
     }
 
     function requestQuery(
@@ -367,7 +374,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool) {
         if (predicate.op == PredicateOp.EQ) return TFHE.eq(ans.metaVals[predicate.metaOpt], predicate.metaVal);
         if (predicate.op == PredicateOp.NE) return TFHE.ne(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-        if (predicate.op == PredicateOp.GT) return TFHE.gt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
-        return TFHE.lt(ans.metaVals[predicate.metaOpt], predicate.metaVal);
+        if (predicate.op == PredicateOp.GE) return TFHE.ge(ans.metaVals[predicate.metaOpt], predicate.metaVal);
+        return TFHE.le(ans.metaVals[predicate.metaOpt], predicate.metaVal);
     }
 }
