@@ -25,6 +25,7 @@ export const fhevmConfig = {
   aclContractAddress: "0xFee8407e2f5e3Ee68ad77cAE98c434e637f516e5",
   gatewayUrl: "https://gateway.sepolia.zama.ai/",
 };
+export const explorerPrefix = "https://sepolia.etherscan.io/";
 
 export const questionSpecLib = {
   address: (process.env.NEXT_PUBLIC_QUESTIONSPECLIB_ADDRESS ?? "0x") as Address,

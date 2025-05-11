@@ -3,7 +3,13 @@ import { analyticContract } from "@/utils";
 import { type MockedFhevmInstance } from "@/utils/fhevmjsMocked";
 import { reencryptEuint32 } from "@/utils/reencrypt";
 import { type FhevmInstance } from "fhevmjs/web";
-import { toHex, type PublicClient, type TransactionReceipt, type WalletClient } from "viem";
+import {
+  toHex,
+  type Account,
+  type PublicClient,
+  type TransactionReceipt,
+  type WalletClient,
+} from "viem";
 import { type UseConfigReturnType } from "wagmi";
 
 export async function sendAnalyticTransaction(
@@ -11,22 +17,34 @@ export async function sendAnalyticTransaction(
   walletClient: WalletClient,
   functionName: string,
   params: Array<unknown>,
+  bSimulate: boolean = true,
 ): Promise<TransactionReceipt> {
   const { account } = walletClient;
   const { address, abi } = analyticContract;
 
-  console.log("params", params);
-
+  let hash = undefined;
   // simulate the tx to confirm it works first
-  const { request } = await publicClient.simulateContract({
-    account,
-    address,
-    abi,
-    functionName,
-    args: [...params],
-  });
+  if (bSimulate) {
+    const { request } = await publicClient.simulateContract({
+      account,
+      address,
+      abi,
+      functionName,
+      args: [...params],
+    });
 
-  const hash = await walletClient.writeContract(request);
+    hash = await walletClient.writeContract(request);
+  } else {
+    hash = await walletClient.writeContract({
+      account: account as Account,
+      address,
+      abi,
+      functionName,
+      args: [...params],
+      chain: null,
+    });
+  }
+
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   return receipt;
 }

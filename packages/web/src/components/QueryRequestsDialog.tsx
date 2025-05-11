@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
 import { analyticContract, querySteps } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { type MouseEvent, useState, useEffect } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
@@ -39,13 +40,17 @@ export function QueryRequestsDialog({
     setLoading(qr.id);
 
     try {
-      const receipt = await sendAnalyticTransaction(publicClient, walletClient, "executeQuery", [
-        qr.id,
-        querySteps,
-      ]);
+      const receipt = await sendAnalyticTransaction(
+        publicClient,
+        walletClient,
+        "executeQuery",
+        [qr.id, querySteps],
+        false,
+      );
 
-      console.log("processQueryRequest", receipt);
+      showToastMessage("success", { tx: receipt.transactionHash });
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on processQueryRequest:", (err as Error).message);
     }
     setLoading(undefined);

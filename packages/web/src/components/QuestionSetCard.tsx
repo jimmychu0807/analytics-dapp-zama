@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { type QuestionSet, QuestionState } from "@/types";
 import { analyticContract, formatDatetime, clientQuestionState } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import { useEffect, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
 
@@ -24,8 +25,10 @@ export function QuestionSetCard({ qId }: { qId: number }) {
       const receipt = await sendAnalyticTransaction(publicClient, walletClient, "closeQuestion", [
         qId,
       ]);
-      console.log("closeQuestion", receipt);
+
+      showToastMessage("success", { tx: receipt.transactionHash });
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on closeQuestion:", (err as Error).message);
     }
   };

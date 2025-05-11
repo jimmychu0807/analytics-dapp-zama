@@ -142,7 +142,9 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     function closeQuestion(uint64 qId) public isQuestionAdmin(qId, msg.sender) {
         Question storage question = questions[qId];
-        question.state = QuestionState.Closed;
+        if (question.state != QuestionState.Closed) {
+            question.state = QuestionState.Closed;
+        }
     }
 
     function answer(
@@ -301,7 +303,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         uint32 stepsToEnd = uint32(answers.length) - req.accSteps;
         if (stepsToEnd < steps) actualSteps = stepsToEnd;
 
-        // --- This is where the query execution happens ---
         ebool eTrue = TFHE.asEbool(true);
         euint32[] storage acc = req.acc;
 
@@ -322,7 +323,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
             }
         }
 
-        // --- Writing back to the storage
+        // writing back to the storage
         req.accSteps += actualSteps;
 
         // granting read access to the req owner of the result

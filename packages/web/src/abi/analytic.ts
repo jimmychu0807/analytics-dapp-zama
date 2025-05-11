@@ -155,6 +155,17 @@ export const abi: Abi = [
         name: "qId",
         type: "uint64",
       },
+    ],
+    name: "QuestionNotOpen",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint64",
+        name: "qId",
+        type: "uint64",
+      },
       {
         internalType: "address",
         name: "sender",

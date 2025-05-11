@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { type QuestionSpec, type QuestionSet, QuestionType, PredicateStrs } from "@/types";
 import { maxPredicates, parseFormDataIntoQueryRequestObj } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop, Select, Input } from "@headlessui/react";
 import { PlusIcon, ChevronDownIcon } from "@heroicons/react/20/solid";
 import clsx from "clsx";
@@ -56,9 +57,10 @@ export function NewQueryRequestDialog({
         queryRequestObj,
       ]);
 
-      console.log("submitNewQueryRequest", receipt);
+      showToastMessage("success", { tx: receipt.transactionHash });
       closeDialog();
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on submitNewQueryRequest:", (err as Error).message);
     }
     setLoading(false);
@@ -80,7 +82,7 @@ export function NewQueryRequestDialog({
           <DialogPanel className="flex flex-col items-center max-w-lg w-1/2 max-h-4/5 overflow-y-auto space-y-4 border bg-white p-6 rounded-lg shadow-xl">
             <DialogTitle className="font-bold text-center">New Query Request</DialogTitle>
 
-            <form onSubmit={submitNewQueryRequest}>
+            <form onSubmit={submitNewQueryRequest} className="w-full">
               <div>
                 <span className="text-sm font-semibold px-4">Predicates ({predicateNum}/3)</span>
                 <Button variant="outline" size="icon" onClick={incPredicate} className="mt-2">

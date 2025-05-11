@@ -5,6 +5,7 @@ import { useFhevm } from "@/contexts/FhevmContext";
 import { type QuestionSpec, type QuestionSet, QuestionType } from "@/types";
 import { parseFormDataIntoAnswerData } from "@/utils";
 import { submitAnswerTx } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import {
   Dialog,
   DialogPanel,
@@ -49,10 +50,11 @@ export function AnswerDialog({ qId, questionSet }: { qId: number; questionSet: Q
     try {
       const ansObj = parseFormDataIntoAnswerData(formData);
       const receipt = await submitAnswerTx(publicClient, walletClient, fhevm, qId, ansObj);
-      console.log("submitAnswer receipt:", receipt);
 
+      showToastMessage("success", { tx: receipt.transactionHash });
       setDialogOpen(false);
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on submitAnswer:", (err as Error).message);
     }
 
