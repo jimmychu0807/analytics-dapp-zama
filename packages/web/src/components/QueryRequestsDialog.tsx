@@ -39,10 +39,13 @@ export function QueryRequestsDialog({
     setLoading(qr.id);
 
     try {
-      const receipt = await sendAnalyticTransaction(publicClient, walletClient, "executeQuery", [
-        qr.id,
-        querySteps,
-      ]);
+      const receipt = await sendAnalyticTransaction(
+        publicClient,
+        walletClient,
+        "executeQuery",
+        [qr.id, querySteps],
+        false,
+      );
 
       console.log("processQueryRequest", receipt);
     } catch (err) {

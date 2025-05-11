@@ -99,7 +99,7 @@ const queryRequests: Record<string, any> = {
   },
 };
 
-task("analytics:new-question", "Load a new question to the Analytic contract")
+task("analytics:newQuestion", "Load a new question to the Analytic contract")
   .addParam("type", "Question type (opt)", "opt", types.string)
   .setAction(async ({ type }, hre) => {
     if (!questions[type]) throw new Error("Question type does not exist.");
@@ -162,7 +162,7 @@ task("analytics:answer", "Answer a particular question")
     }
   });
 
-task("analytics:new-queryRequest", "Create a query request")
+task("analytics:newQuery", "Create a query request")
   .addPositionalParam("qId", "Question ID")
   .addParam("type", "question type", "opt", types.string)
   .addParam("qrType", "query request type", "0pred", types.string)
@@ -174,12 +174,26 @@ task("analytics:new-queryRequest", "Create a query request")
     const queryRequest = queryRequests[type][qrType];
     const signer = (await hre.ethers.getSigners())[0];
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
-      const tx = await analyticContract
-        .connect(signer)
-        .requestQuery(qId, queryRequest);
-      const receipt = await tx.wait();
+    const tx = await analyticContract
+      .connect(signer)
+      .requestQuery(qId, queryRequest);
+    const receipt = await tx.wait();
 
-      parseReceiptEvents(receipt!, hre);
+    parseReceiptEvents(receipt!, hre);
+  });
+
+task("analytics:executeQuery", "Process Query Request")
+  .addPositionalParam("reqId", "Query Request ID")
+  .addParam("steps", "Number of steps to take", 5, types.int)
+  .setAction(async ({ reqId, steps }, hre) => {
+    const signer = (await hre.ethers.getSigners())[0];
+    const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
+    const tx = await analyticContract
+      .connect(signer)
+      .executeQuery(reqId, steps);
+    const receipt = await tx.wait();
+
+    parseReceiptEvents(receipt!, hre);
   });
 
 task("analytics:read", "Perform read action on Analytic contract")
