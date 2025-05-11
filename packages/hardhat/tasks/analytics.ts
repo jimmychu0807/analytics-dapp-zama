@@ -6,6 +6,7 @@ import { type HardhatRuntimeEnvironment } from "hardhat/types";
 import AnalyticJSON from "../artifacts/contracts/Analytic.sol/Analytic.json";
 import { getMockedFhevm } from "../mockedServices/client";
 import { newQuestionSpec } from "../test/analytic/helpers";
+import { PredicateOp } from "../test/analytic/types";
 
 dotenv.config();
 
@@ -32,6 +33,12 @@ const questions: Record<string, any> = {
     }),
     metas: [newQuestionSpec("Your gender", { options: ["Male", "Female"] })],
   },
+  "opt-1val": {
+    main: newQuestionSpec("Which L2 chains do you use most?", {
+      options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
+    }),
+    metas: [newQuestionSpec("Your age", { min: 18, max: 150 })],
+  },
   "val-1val": {
     main: newQuestionSpec("What is your annual salary?", {
       min: 0,
@@ -54,37 +61,42 @@ const questions: Record<string, any> = {
 const answers: Record<string, any> = {
   opt: [[0], [1], [2], [3], [0], [1], [2], [3], [0], [1]],
   val: [[20], [25], [30], [35], [40], [45], [50], [55], [60], [65]],
+  // prettier-ignore
   "opt-1opt": [
-    [0, 0],
-    [1, 1],
-    [2, 0],
-    [3, 1],
-    [0, 0],
-    [1, 0],
-    [2, 1],
-    [3, 0],
-    [0, 1],
-    [1, 0],
+    [0, 0], [1, 1], [2, 0], [3, 1], [0, 0],
+    [1, 0], [2, 1], [3, 0], [0, 1], [1, 0],
   ],
+  // prettier-ignore
+  "opt-1val": [
+    [0, 20], [1, 25], [2, 30], [3, 35], [0, 40],
+    [1, 45], [2, 50], [3, 55], [0, 60], [1, 65],
+  ],
+  // prettier-ignore
   "val-1val": [
-    [50000, 20],
-    [60000, 24],
-    [70000, 26],
-    [80000, 28],
-    [110000, 29],
-    [150000, 30],
-    [160000, 34],
-    [170000, 36],
-    [180000, 38],
-    [210000, 39],
+    [50000, 20], [60000, 24], [70000, 26], [80000, 28], [110000, 29],
+    [150000, 30], [160000, 34], [170000, 36], [180000, 38], [210000, 39],
   ],
+  // prettier-ignore
   "opt-1opt1val": [
-    [0, 0, 20],
-    [1, 1, 30],
-    [2, 1, 40],
-    [0, 0, 25],
-    [0, 1, 35],
+    [0, 0, 20], [1, 1, 30], [2, 1, 40], [0, 0, 25], [0, 1, 35],
   ],
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const queryRequests: Record<string, any> = {
+  "opt-1val": {
+    "0pred": [],
+    "1pred": [{ metaOpt: 0, op: PredicateOp.GE, metaVal: 35 }],
+    "2pred": [
+      { metaOpt: 0, op: PredicateOp.GE, metaVal: 35 },
+      { metaOpt: 0, op: PredicateOp.LE, metaVal: 55 },
+    ],
+    "3pred": [
+      { metaOpt: 0, op: PredicateOp.GE, metaVal: 35 },
+      { metaOpt: 0, op: PredicateOp.LE, metaVal: 55 },
+      { metaOpt: 0, op: PredicateOp.NE, metaVal: 45 },
+    ],
+  },
 };
 
 task("analytics:new-question", "Load a new question to the Analytic contract")
@@ -109,7 +121,7 @@ task("analytics:new-question", "Load a new question to the Analytic contract")
   });
 
 task("analytics:answer", "Answer a particular question")
-  .addPositionalParam("qId", "Question ID", 0, types.int)
+  .addPositionalParam("qId", "Question ID")
   .addParam("type", "question type", "opt", types.string)
   .addParam("start", "start index of answer fixtures", 0, types.int)
   .addParam("num", "number of answers", 1, types.int)
@@ -150,6 +162,26 @@ task("analytics:answer", "Answer a particular question")
     }
   });
 
+task("analytics:new-queryRequest", "Create a query request")
+  .addPositionalParam("qId", "Question ID")
+  .addParam("type", "question type", "opt", types.string)
+  .addParam("qrType", "query request type", "0pred", types.string)
+  .setAction(async ({ qId, type, qrType }, hre) => {
+
+    if (!queryRequests[type]) throw new Error(`Unknown question type "${type}"`);
+    if (!queryRequests[type][qrType]) throw new Error(`Unknown query request type "${qrType}"`);
+
+    const queryRequest = queryRequests[type][qrType];
+    const signer = (await hre.ethers.getSigners())[0];
+    const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
+      const tx = await analyticContract
+        .connect(signer)
+        .requestQuery(qId, queryRequest);
+      const receipt = await tx.wait();
+
+      parseReceiptEvents(receipt!, hre);
+  });
+
 task("analytics:read", "Perform read action on Analytic contract")
   .addPositionalParam("func", "The read function name")
   .addPositionalParam("params", "parameters", "")
@@ -166,7 +198,11 @@ task("analytics:read", "Perform read action on Analytic contract")
     console.log(result);
   });
 
-function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment, bPrint: boolean = true) {
+function parseReceiptEvents(
+  receipt: TransactionReceipt,
+  hre: HardhatRuntimeEnvironment,
+  bPrint: boolean = true
+) {
   const events = [];
   const iface = new hre.ethers.Interface(AnalyticContract.abi);
 
@@ -175,9 +211,7 @@ function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvi
     if (event) events.push(event);
   }
 
-  if (bPrint) {
-    events.forEach((ev) => console.log(`${ev.name}`, ev.args));
-  }
+  if (bPrint) events.forEach((ev) => console.log(`${ev.name}`, ev.args));
 
   return events;
 }

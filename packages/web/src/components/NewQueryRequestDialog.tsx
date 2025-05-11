@@ -80,7 +80,7 @@ export function NewQueryRequestDialog({
           <DialogPanel className="flex flex-col items-center max-w-lg w-1/2 max-h-4/5 overflow-y-auto space-y-4 border bg-white p-6 rounded-lg shadow-xl">
             <DialogTitle className="font-bold text-center">New Query Request</DialogTitle>
 
-            <form onSubmit={submitNewQueryRequest}>
+            <form onSubmit={submitNewQueryRequest} className="w-full">
               <div>
                 <span className="text-sm font-semibold px-4">Predicates ({predicateNum}/3)</span>
                 <Button variant="outline" size="icon" onClick={incPredicate} className="mt-2">
