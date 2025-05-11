@@ -120,7 +120,7 @@ function Predicate({ questionSet, prefix }: { questionSet: QuestionSet; prefix: 
     setSelectedMeta(questionSet.metas[idx]);
   };
 
-  const compareActions = ["== (equal)", "!= (not equal)", "> (greater than)", "< (less than)"];
+  const compareActions = ["= (eq)", "≠ (ne)", "≥ (gte)", "≤ (lte)"];
 
   const selectInputClasses = clsx(
     "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",

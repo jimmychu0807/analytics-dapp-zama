@@ -326,7 +326,7 @@ describe("Analytic", function () {
       .connect(this.signers.alice)
       .requestQuery(qId, [
         { metaOpt: 0, op: PredicateOp.EQ, metaVal: 2 },
-        { metaOpt: 1, op: PredicateOp.GT, metaVal: 29 },
+        { metaOpt: 1, op: PredicateOp.GE, metaVal: 29 },
        ]);
 
     // Executing the query in multiple steps. Currently the steps is manually configured
@@ -363,7 +363,7 @@ describe("Analytic", function () {
     );
 
     const bucketSize = 5;
-    const filteredAns = ansData.filter(([, metaVal1, metaVal2]) => metaVal1 === 2 && metaVal2 > 29);
+    const filteredAns = ansData.filter(([, metaVal1, metaVal2]) => metaVal1 === 2 && metaVal2 >= 29);
 
     const bucketCnt = filteredAns.reduce((acc, ans) => {
       acc[ans[0]] += 1;
@@ -420,7 +420,7 @@ describe("Analytic", function () {
 
     await this.analyticContract.connect(signer).requestQuery(qId, [
       { metaOpt: 0, op: PredicateOp.EQ, metaVal: 1 },
-      { metaOpt: 1, op: PredicateOp.GT, metaVal: 9 },
+      { metaOpt: 1, op: PredicateOp.GE, metaVal: 9 },
     ]);
 
     // Executing the query in multiple steps. Currently the steps is manually configured
@@ -456,7 +456,7 @@ describe("Analytic", function () {
       this.contractAddress,
     );
 
-    const filteredData = ansData.filter(([, m0, m1]) => m0 === 1 && m1 > 9);
+    const filteredData = ansData.filter(([, m0, m1]) => m0 === 1 && m1 >= 9);
     const ansVals = filteredData.map((d) => d[0]);
     const stats = [Math.min(...ansVals), ansVals.reduce((acc, v) => acc + v), Math.max(...ansVals)];
 

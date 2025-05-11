@@ -23,7 +23,7 @@ export function QueryResultDialog({
   const { data: walletClient } = useWalletClient();
   const config = useConfig();
 
-  const compareActions = ["==", "!=", ">", "<"];
+  const compareActions = ["= (eq)", "≠ (ne)", "≥ (gte)", "≤ (lte)"];
 
   const openQueryResultDialog = async () => {
     setDialogOpen(true);

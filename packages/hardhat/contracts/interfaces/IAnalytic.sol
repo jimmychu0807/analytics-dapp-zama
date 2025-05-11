@@ -14,8 +14,8 @@ interface IAnalytic {
     enum PredicateOp {
         EQ,
         NE,
-        GT,
-        LT
+        GE,
+        LE
     }
 
     enum RequestState {
