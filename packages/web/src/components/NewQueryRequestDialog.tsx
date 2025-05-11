@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { type QuestionSpec, type QuestionSet, QuestionType, PredicateStrs } from "@/types";
 import { maxPredicates, parseFormDataIntoQueryRequestObj } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop, Select, Input } from "@headlessui/react";
 import { PlusIcon, ChevronDownIcon } from "@heroicons/react/20/solid";
 import clsx from "clsx";
@@ -56,9 +57,10 @@ export function NewQueryRequestDialog({
         queryRequestObj,
       ]);
 
-      console.log("submitNewQueryRequest", receipt);
+      showToastMessage("success", { tx: receipt.transactionHash });
       closeDialog();
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on submitNewQueryRequest:", (err as Error).message);
     }
     setLoading(false);

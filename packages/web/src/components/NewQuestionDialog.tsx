@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { maxMetas, parseFormDataIntoQuestionData } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
+import { showToastMessage } from "@/utils/toast";
 import {
   Dialog,
   DialogPanel,
@@ -78,11 +79,11 @@ export function NewQuestionDialog() {
         queryThreshold,
       ]);
 
-      console.log("submitNewQuestion", receipt);
-
+      showToastMessage("success", { tx: receipt.transactionHash });
       // Close only when the above ops succeeed
       closeDialog();
     } catch (err) {
+      showToastMessage("failed", { message: (err as Error).message });
       console.error("Error on submitNewQuestion:", (err as Error).message);
     }
     setLoading(false);
