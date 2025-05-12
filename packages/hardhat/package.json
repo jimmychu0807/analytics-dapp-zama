@@ -20,7 +20,7 @@
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",
     "lint:ts:fix": "eslint --fix .",
-    "postinstall": "pnpm typechain",
+    "postinstall": "pnpm compile && pnpm typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "hardhat typechain",
@@ -29,7 +29,7 @@
     "test:all": "hardhat test --network hardhat",
     "test:all-reportGas": "REPORT_GAS=true hardhat test --network hardhat",
     "coverage": "hardhat coverage",
-    "deploy-sepolia": "hardhat deploy --network sepolia"
+    "deploy-sepolia": "hardhat deploy --tags Analytic --network sepolia"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

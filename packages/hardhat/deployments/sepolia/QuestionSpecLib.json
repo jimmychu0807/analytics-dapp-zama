@@ -1,0 +1,92 @@
+{
+  "address": "0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "name": "InvalidQuestionSpecParam",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "text",
+              "type": "string"
+            },
+            {
+              "internalType": "string[]",
+              "name": "options",
+              "type": "string[]"
+            },
+            {
+              "internalType": "uint32",
+              "name": "min",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "max",
+              "type": "uint32"
+            },
+            {
+              "internalType": "enum QuestionSpecLib.QuestionType",
+              "name": "t",
+              "type": "QuestionSpecLib.QuestionType"
+            }
+          ],
+          "internalType": "struct QuestionSpecLib.QuestionSpec",
+          "name": "self",
+          "type": "tuple"
+        }
+      ],
+      "name": "validate",
+      "outputs": [],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x45f33ec5c8b4f8093e33bae586df93054e96547bb67ee5193a47352f99848b89",
+  "receipt": {
+    "to": null,
+    "from": "0xeB10092a57e4fCb7260e05E4d3d2D29c84339758",
+    "contractAddress": "0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5",
+    "transactionIndex": 101,
+    "gasUsed": "230041",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x302fe3f082e8ad370bd9f9283d7c601a4afafbb33861b0fb56c990a2585c27dd",
+    "transactionHash": "0x45f33ec5c8b4f8093e33bae586df93054e96547bb67ee5193a47352f99848b89",
+    "logs": [],
+    "blockNumber": 8308347,
+    "cumulativeGasUsed": "10101399",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "31388657b955cac95cfdbf4b7000147c",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.24+commit.e11b9ed9\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"reason\",\"type\":\"string\"}],\"name\":\"InvalidQuestionSpecParam\",\"type\":\"error\"},{\"inputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"text\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"options\",\"type\":\"string[]\"},{\"internalType\":\"uint32\",\"name\":\"min\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"max\",\"type\":\"uint32\"},{\"internalType\":\"enum QuestionSpecLib.QuestionType\",\"name\":\"t\",\"type\":\"QuestionSpecLib.QuestionType\"}],\"internalType\":\"struct QuestionSpecLib.QuestionSpec\",\"name\":\"self\",\"type\":\"tuple\"}],\"name\":\"validate\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/QuestionSpecLib.sol\":\"QuestionSpecLib\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[],\"viaIR\":true},\"sources\":{\"contracts/QuestionSpecLib.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause-Clear\\npragma solidity ^0.8.24;\\n\\nuint16 constant TXT_MAX_LEN = 512;\\n\\nlibrary QuestionSpecLib {\\n    enum QuestionType {\\n        Option, // For example 1 - count on the options pollers choose\\n        Value // For example 2 - perform min,max,avg on the numeric ans people give\\n    }\\n\\n    struct QuestionSpec {\\n        string text;\\n        string[] options;\\n        uint32 min;\\n        uint32 max;\\n        QuestionType t;\\n    }\\n\\n    error InvalidQuestionSpecParam(string reason);\\n\\n    function validate(QuestionSpec memory self) public pure {\\n        if (bytes(self.text).length > TXT_MAX_LEN) revert InvalidQuestionSpecParam(\\\"questionText max length exceeded\\\");\\n        if (self.t == QuestionType.Option && self.options.length < 2)\\n            revert InvalidQuestionSpecParam(\\\"Options should be greater than 1\\\");\\n        if (self.min >= self.max) revert InvalidQuestionSpecParam(\\\"min should be less than max\\\");\\n    }\\n}\\n\",\"keccak256\":\"0x9164c84e1db922d291362ee8126f9609f9ed9a1d8e7e43b0f7faa6af37986afe\",\"license\":\"BSD-3-Clause-Clear\"}},\"version\":1}",
+  "bytecode": "0x6080806040523461001a57610331908161001f823930815050f35b5f80fdfe608060048036101561000f575f80fd5b5f3560e01c63b4d54fdb14610022575f80fd5b60206003199281843601126102385782359067ffffffffffffffff948583116102385760a09083360301126102385760a081018181108682111761027457604052818401358581116102385761007d908536918501016102c1565b81526024948583013581811161023857830136602382011215610238578581013591808311610262578260051b9088876100b8818501610287565b8096815201928401019236841161023857898101925b84841061023c5750505050508382019081526100ec60448401610313565b9160408101928352608461010260648601610313565b946060830195865201359060028210156102385780608061020092019283525151116101f6575160028110156101e4571590816101d7575b506101955763ffffffff80915116915116111561015357005b606492601b91604051936301cebd5360e11b85528401528201527f6d696e2073686f756c64206265206c657373207468616e206d617800000000006044820152fd5b505060649281604051936301cebd5360e11b85528401528201527f4f7074696f6e732073686f756c642062652067726561746572207468616e20316044820152fd5b600291505151105f61013a565b86602187634e487b7160e01b5f52525ffd5b606486868981604051936301cebd5360e11b85528401528201527f7175657374696f6e54657874206d6178206c656e6774682065786365656465646044820152fd5b5f80fd5b833583811161023857899161025783928e36918701016102c1565b8152019301926100ce565b87604188634e487b7160e01b5f52525ffd5b604185634e487b7160e01b5f525260245ffd5b6040519190601f01601f1916820167ffffffffffffffff8111838210176102ad57604052565b634e487b7160e01b5f52604160045260245ffd5b81601f820112156102385780359067ffffffffffffffff82116102ad576102f1601f8301601f1916602001610287565b928284526020838301011161023857815f926020809301838601378301015290565b359063ffffffff821682036102385756fea164736f6c6343000818000a",
+  "deployedBytecode": "0x608060048036101561000f575f80fd5b5f3560e01c63b4d54fdb14610022575f80fd5b60206003199281843601126102385782359067ffffffffffffffff948583116102385760a09083360301126102385760a081018181108682111761027457604052818401358581116102385761007d908536918501016102c1565b81526024948583013581811161023857830136602382011215610238578581013591808311610262578260051b9088876100b8818501610287565b8096815201928401019236841161023857898101925b84841061023c5750505050508382019081526100ec60448401610313565b9160408101928352608461010260648601610313565b946060830195865201359060028210156102385780608061020092019283525151116101f6575160028110156101e4571590816101d7575b506101955763ffffffff80915116915116111561015357005b606492601b91604051936301cebd5360e11b85528401528201527f6d696e2073686f756c64206265206c657373207468616e206d617800000000006044820152fd5b505060649281604051936301cebd5360e11b85528401528201527f4f7074696f6e732073686f756c642062652067726561746572207468616e20316044820152fd5b600291505151105f61013a565b86602187634e487b7160e01b5f52525ffd5b606486868981604051936301cebd5360e11b85528401528201527f7175657374696f6e54657874206d6178206c656e6774682065786365656465646044820152fd5b5f80fd5b833583811161023857899161025783928e36918701016102c1565b8152019301926100ce565b87604188634e487b7160e01b5f52525ffd5b604185634e487b7160e01b5f525260245ffd5b6040519190601f01601f1916820167ffffffffffffffff8111838210176102ad57604052565b634e487b7160e01b5f52604160045260245ffd5b81601f820112156102385780359067ffffffffffffffff82116102ad576102f1601f8301601f1916602001610287565b928284526020838301011161023857815f926020809301838601378301015290565b359063ffffffff821682036102385756fea164736f6c6343000818000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

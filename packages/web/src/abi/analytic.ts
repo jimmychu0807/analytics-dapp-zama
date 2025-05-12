@@ -145,7 +145,7 @@ export const abi: Abi = [
         type: "uint64",
       },
     ],
-    name: "QuestionClosed",
+    name: "QuestionAlreadyClosed",
     type: "error",
   },
   {
@@ -156,7 +156,7 @@ export const abi: Abi = [
         type: "uint64",
       },
     ],
-    name: "QuestionNotOpen",
+    name: "QuestionNotOpenYet",
     type: "error",
   },
   {
@@ -262,6 +262,19 @@ export const abi: Abi = [
       },
     ],
     name: "QueryRequestDeleted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint64",
+        name: "qId",
+        type: "uint64",
+      },
+    ],
+    name: "QuestionClosed",
     type: "event",
   },
   {

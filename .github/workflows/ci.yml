@@ -29,8 +29,9 @@ jobs:
         run: "pnpm install"
         env:
           MNEMONIC:
-            "exchange vintage ocean narrow danger return culture ignore trim solve clock hidden buddy wise emotion"
-          SEPOLIA_RPC_URL: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID"
+            "test test test test test test test test test test test junk"
+          SEPOLIA_RPC_URL: "http://localhost:8545"
+          DEPLOYER_KEY: "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
       - name: "Lint"
         run: |
@@ -46,8 +47,9 @@ jobs:
 
         env:
           MNEMONIC:
-            "exchange vintage ocean narrow danger return culture ignore trim solve clock hidden buddy wise emotion"
-          SEPOLIA_RPC_URL: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID"
+            "test test test test test test test test test test test junk"
+          SEPOLIA_RPC_URL: "http://localhost:8545"
+          DEPLOYER_KEY: "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
       - name: "Add test summary"
         run: |

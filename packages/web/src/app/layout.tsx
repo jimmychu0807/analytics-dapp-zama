@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -38,7 +39,7 @@ export default async function RootLayout({
           <div className="flex flex-col items-center justify-center min-h-screen md:px-[0] font-[family-name:var(--font-geist-sans)]">
             <Header />
             <main className="flex-auto w-full">{children}</main>
-            <footer className="h-20 flex flex-row items-center">Footer</footer>
+            <Footer />
           </div>
           <Toaster richColors closeButton={true} />
         </Providers>

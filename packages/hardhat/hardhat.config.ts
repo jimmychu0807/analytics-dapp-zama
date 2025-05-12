@@ -46,9 +46,6 @@ function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
     case "zama":
       jsonRpcUrl = "https://devnet.zama.ai";
       break;
-    case "sepolia":
-      jsonRpcUrl = process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/YOUR-PROJECT-ID";
-      break;
     default:
       jsonRpcUrl = "http://localhost:8545";
   }
@@ -108,7 +105,10 @@ const config: HardhatUserConfig = {
       },
       chainId: chainIds["hardhat"],
     },
-    sepolia: getChainConfig("sepolia"),
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL!,
+      accounts: [process.env.DEPLOYER_KEY ?? ""],
+    },
     zama: getChainConfig("zama"),
     localhost: getChainConfig("localhost"),
     localCoprocessor: getChainConfig("localCoprocessor"),
