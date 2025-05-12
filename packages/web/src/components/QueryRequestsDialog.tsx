@@ -27,17 +27,17 @@ export function QueryRequestsDialog({
 
   useWatchAndPerform({
     eventName: "QueryRequestCreated",
-    action: (logs) => setToRefetch(true),
+    action: () => setToRefetch(true),
   });
 
   useWatchAndPerform({
     eventName: "QueryExecutionRunning",
-    action: (logs) => setToRefetch(true),
+    action: () => setToRefetch(true),
   });
 
   useWatchAndPerform({
     eventName: "QueryExecutionCompleted",
-    action: (logs) => setToRefetch(true),
+    action: () => setToRefetch(true),
   });
 
   const publicClient = usePublicClient();

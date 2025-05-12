@@ -23,13 +23,13 @@ export function QuestionSetCard({ qId }: { qId: number }) {
   useWatchAndPerform({
     eventName: "ConfirmAnswer",
     args: { qId },
-    action: (logs) => setToRefetch(true),
+    action: () => setToRefetch(true),
   });
 
   useWatchAndPerform({
     eventName: "QuestionClosed",
     args: { qId },
-    action: (logs) => setToRefetch(true),
+    action: () => setToRefetch(true),
   });
 
   const closeQuestion = async () => {

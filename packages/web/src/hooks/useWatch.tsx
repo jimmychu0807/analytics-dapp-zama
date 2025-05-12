@@ -5,11 +5,9 @@ import { useWatchContractEvent } from "wagmi";
 
 export function useWatchAndInvalidateQuery({
   eventName,
-  args,
   queryKey,
 }: {
   eventName: string;
-  args?: Array<unknown>;
   queryKey: QueryKey;
 }) {
   const queryClient = useQueryClient();
@@ -17,7 +15,7 @@ export function useWatchAndInvalidateQuery({
   useWatchContractEvent({
     ...analyticContract,
     eventName,
-    onLogs: (logs) => {
+    onLogs: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
