@@ -84,6 +84,9 @@ const answers: Record<string, any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const queryRequests: Record<string, any> = {
+  "opt": {
+    "0pred": [],
+  },
   "opt-1val": {
     "0pred": [],
     "1pred": [{ metaOpt: 0, op: PredicateOp.GE, metaVal: 35 }],

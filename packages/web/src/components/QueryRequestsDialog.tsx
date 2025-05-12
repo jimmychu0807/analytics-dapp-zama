@@ -1,6 +1,7 @@
 import { NewQueryRequestDialog } from "@/components/NewQueryRequestDialog";
 import { QueryResultDialog } from "@/components/QueryResultDialog";
 import { Button } from "@/components/ui/button";
+import { useWatchAndPerform } from "@/hooks";
 import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
 import { analyticContract, querySteps } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
@@ -22,6 +23,12 @@ export function QueryRequestsDialog({
   const [isLoading, setLoading] = useState<bigint>();
   const [queryRequestIds, setQueryRequestIds] = useState<bigint[]>([]);
   const [queryRequests, setQueryRequests] = useState<QueryRequest[]>([]);
+  const [toRefetch, setToRefetch] = useState<boolean>(true);
+
+  useWatchAndPerform({
+    eventName: "QueryRequestCreated",
+    action: (logs) => setToRefetch(true),
+  });
 
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -59,7 +66,7 @@ export function QueryRequestsDialog({
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      if (!publicClient || !walletClient) return;
+      if (!publicClient || !walletClient || !toRefetch) return;
 
       const { address } = walletClient.account;
 
@@ -72,6 +79,7 @@ export function QueryRequestsDialog({
 
         if (isMounted) {
           setQueryRequestIds(_queryRequestIds as bigint[]);
+          setToRefetch(false);
         }
       } catch (err) {
         console.error("getUserQueryRequestList error:", err);
@@ -80,7 +88,7 @@ export function QueryRequestsDialog({
     return () => {
       isMounted = false;
     };
-  }, [publicClient, walletClient, qId]);
+  }, [publicClient, walletClient, qId, toRefetch]);
 
   useEffect(() => {
     let isMounted = true;

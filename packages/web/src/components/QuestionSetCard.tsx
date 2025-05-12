@@ -2,6 +2,7 @@ import { AnswerDialog } from "@/components/AnswerDialog";
 import { QueryRequestsDialog } from "@/components/QueryRequestsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useWatchAndPerform } from "@/hooks";
 import { type QuestionSet, QuestionState } from "@/types";
 import { analyticContract, formatDatetime, clientQuestionState } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
@@ -17,6 +18,13 @@ export function QuestionSetCard({ qId }: { qId: number }) {
   const [ansLen, setAnsLen] = useState<bigint>();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [hasAnswered, setHasAnswered] = useState<boolean>(false);
+  const [toRefetch, setToRefetch] = useState<boolean>(true);
+
+  useWatchAndPerform({
+    eventName: "ConfirmAnswer",
+    args: { qId },
+    action: (logs) => setToRefetch(true),
+  });
 
   const closeQuestion = async () => {
     if (!publicClient || !walletClient) return;
@@ -37,7 +45,7 @@ export function QuestionSetCard({ qId }: { qId: number }) {
     let isMounted = true;
 
     (async () => {
-      if (!publicClient || !walletClient) return;
+      if (!publicClient || !walletClient || !toRefetch) return;
 
       const address = walletClient.account.address;
       const [_questionSet, _ansLen, _isAdmin, _hasAnswered] = await Promise.all([
@@ -68,13 +76,14 @@ export function QuestionSetCard({ qId }: { qId: number }) {
         setAnsLen(_ansLen as bigint);
         setIsAdmin(_isAdmin as boolean);
         setHasAnswered(_hasAnswered as boolean);
+        setToRefetch(false);
       }
     })();
 
     return () => {
       isMounted = false;
     };
-  }, [publicClient, walletClient, qId]);
+  }, [publicClient, walletClient, qId, toRefetch]);
 
   if (!questionSet) return <div />;
 

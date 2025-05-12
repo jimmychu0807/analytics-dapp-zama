@@ -3,6 +3,7 @@
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { QuestionSetCard } from "@/components/QuestionSetCard";
 import { WalletConnect } from "@/components/WalletConnect";
+import { useWatchAndInvalidateQuery } from "@/hooks";
 import { analyticContract, requiredChainId } from "@/utils";
 import { useReadContract } from "wagmi";
 
@@ -12,11 +13,13 @@ export default function Home() {
     isSuccess,
     error,
     status,
+    queryKey,
   } = useReadContract({
     ...analyticContract,
     functionName: "nextQuestionId",
-    // query: { refetchInterval: 6000 },
   });
+
+  useWatchAndInvalidateQuery({ eventName: "QuestionCreated", queryKey });
 
   if (status === "error") console.error("Read contract error:", error);
 

@@ -31,7 +31,7 @@ export const projectInfo = {
   src: "https://github.com/jimmychu0807/analytics-dapp-zama",
   blog: "http://jimmychu0807.hk/analytics-dapp-zama",
   video: "",
-}
+};
 
 export const questionSpecLib = {
   address: (process.env.NEXT_PUBLIC_QUESTIONSPECLIB_ADDRESS ?? "0x") as Address,
