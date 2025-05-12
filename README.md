@@ -17,11 +17,11 @@ This is a confidential polling dApp that has the following features:
    Example 1:
    - main: Which L2 chain do you use most? (option: OP Mainnet, Base, Arbitrum, Zk Sync).
    - meta 1: Your Gender (option: male, female)
-   - meta 2: Your Age (value - min: 18, max: 150)
+   - meta 2: Your Age (value: 18 - 150)
 
    Example 2:
    - main: What is your annual salary (USD)? (value: 0 - 100,000,000)
-   - meta1: Your Gender (option: male, female)
+   - meta 1: Your Gender (option: male, female)
 
    In practice, the meta question is capped to four in the application.
 
