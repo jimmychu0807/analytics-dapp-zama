@@ -14,16 +14,16 @@ This is a confidential polling dApp that has the following features:
 
 1. The surveyer can create a question set consists of a **main** question together with multiple **meta** questions, and each question can be either an option that allow answerer to pick one of the option or a value with a min and max range bound. An example of the question set would be:
 
-  Example 1:
-  - main: Which L2 chain do you use most? (option: OP Mainnet, Base, Arbitrum, Zk Sync).
-  - meta 1: Your Gender (option: male, female)
-  - meta 2: Your Age (value - min: 18, max: 150)
+   Example 1:
+   - main: Which L2 chain do you use most? (option: OP Mainnet, Base, Arbitrum, Zk Sync).
+   - meta 1: Your Gender (option: male, female)
+   - meta 2: Your Age (value - min: 18, max: 150)
 
-  Example 2:
-  - main: What is your annual salary (USD)? (value: 0 - 100,000,000)
-  - meta1: Your Gender (option: male, female)
+   Example 2:
+   - main: What is your annual salary (USD)? (value: 0 - 100,000,000)
+   - meta1: Your Gender (option: male, female)
 
-  In practice, the meta question is capped to three in the application.
+   In practice, the meta question is capped to four in the application.
 
 2. Respondent answer sets are encrypted on the client-side before sending on-chain. The encrypted answer set [is checked](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L173-L187) on the smart contract side to be within the range specified. After the check, we will request the [validity flag](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L209) (a boolean) to be decrypted. The gateway will send the clear answer back to the smart contract. If the answer set is valid, it will be added to the corresponding storage.
 
@@ -31,12 +31,12 @@ This is a confidential polling dApp that has the following features:
 
 4. Once a **Query Request** is created, the surveyer need to execute/process the query request for the query request to process the answers. This involves [intensive accumulation of FHE-encrypted answer values](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L315-L324) and lot of FHE gas may be consumed, so a `steps` parameter can be specified to determine how many answers to step through at a time and write the intermediate answer back to the storage. In practice, it seems processing 5 - 8 answers at a time is the sweet spot of having a small number of query execution while staying within the bound of 3,000,000 FHE gas limit per block.
 
-  Once a Query Request is fully processed, its query result could be fetched by the client side.
+   Once a Query Request is fully processed, its query result could be fetched by the client side.
 
-For more details, refer to the readme inside:
+   For more details, refer to the readme inside:
 
-- [**hardhat**](./packages/hardhat)
-- [**web**](./packages/web)
+   - [**hardhat**](./packages/hardhat) package
+   - [**web**](./packages/web) package
 
 ## Development
 
