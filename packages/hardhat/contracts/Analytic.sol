@@ -7,7 +7,7 @@ import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
 import { IAnalytic } from "./interfaces/IAnalytic.sol";
 import { QuestionSpecLib } from "./QuestionSpecLib.sol";
-import { console } from "hardhat/console.sol";
+// import { console } from "hardhat/console.sol";
 
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
     // --- library ---
