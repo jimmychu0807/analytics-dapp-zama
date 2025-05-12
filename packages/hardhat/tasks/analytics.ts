@@ -84,7 +84,7 @@ const answers: Record<string, any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const queryRequests: Record<string, any> = {
-  "opt": {
+  opt: {
     "0pred": [],
   },
   "opt-1val": {
@@ -170,16 +170,13 @@ task("analytics:newQuery", "Create a query request")
   .addParam("type", "question type", "opt", types.string)
   .addParam("qrType", "query request type", "0pred", types.string)
   .setAction(async ({ qId, type, qrType }, hre) => {
-
     if (!queryRequests[type]) throw new Error(`Unknown question type "${type}"`);
     if (!queryRequests[type][qrType]) throw new Error(`Unknown query request type "${qrType}"`);
 
     const queryRequest = queryRequests[type][qrType];
     const signer = (await hre.ethers.getSigners())[0];
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
-    const tx = await analyticContract
-      .connect(signer)
-      .requestQuery(qId, queryRequest);
+    const tx = await analyticContract.connect(signer).requestQuery(qId, queryRequest);
     const receipt = await tx.wait();
 
     parseReceiptEvents(receipt!, hre);
@@ -191,9 +188,7 @@ task("analytics:executeQuery", "Process Query Request")
   .setAction(async ({ reqId, steps }, hre) => {
     const signer = (await hre.ethers.getSigners())[0];
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
-    const tx = await analyticContract
-      .connect(signer)
-      .executeQuery(reqId, steps);
+    const tx = await analyticContract.connect(signer).executeQuery(reqId, steps);
     const receipt = await tx.wait();
 
     parseReceiptEvents(receipt!, hre);
@@ -215,11 +210,7 @@ task("analytics:read", "Perform read action on Analytic contract")
     console.log(result);
   });
 
-function parseReceiptEvents(
-  receipt: TransactionReceipt,
-  hre: HardhatRuntimeEnvironment,
-  bPrint: boolean = true
-) {
+function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment, bPrint: boolean = true) {
   const events = [];
   const iface = new hre.ethers.Interface(AnalyticContract.abi);
 

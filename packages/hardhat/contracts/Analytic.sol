@@ -34,9 +34,9 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         Question storage question = questions[qId];
 
-        if (question.state == QuestionState.Closed) revert QuestionClosed(qId);
-        if (block.timestamp > question.endTime) revert QuestionClosed(qId);
-        if (block.timestamp < question.startTime) revert QuestionNotOpen(qId);
+        if (question.state == QuestionState.Closed) revert QuestionAlreadyClosed(qId);
+        if (block.timestamp > question.endTime) revert QuestionAlreadyClosed(qId);
+        if (block.timestamp < question.startTime) revert QuestionNotOpenYet(qId);
         _;
     }
 
@@ -144,6 +144,7 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Question storage question = questions[qId];
         if (question.state != QuestionState.Closed) {
             question.state = QuestionState.Closed;
+            emit QuestionClosed(qId);
         }
     }
 
@@ -209,14 +210,14 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
 
-        console.log("sender: %s, reqId: %s, decValid: %s", sender, reqId, decValid);
+        // console.log("sender: %s, reqId: %s, decValid: %s", sender, reqId, decValid);
 
         if (!decValid) revert RejectAnswer(qId, sender);
 
         // valid Answer
         euint32[] memory params = getParamsEUint32(reqId);
 
-        console.log("qId: %s, param len: %s", qId, params.length);
+        // console.log("qId: %s, param len: %s", qId, params.length);
 
         euint32[] memory metaVals = new euint32[](params.length - 1);
         for (uint256 i = 1; i < params.length; i++) {
@@ -226,10 +227,10 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Answer memory ans = Answer({ val: params[0], metaVals: metaVals });
         questionAnswers[qId].push(ans);
         hasAnswered[qId][sender] = true;
-        console.log("answer len: %s", questionAnswers[qId].length);
+        // console.log("answer len: %s", questionAnswers[qId].length);
 
         emit ConfirmAnswer(qId, sender);
-        console.log("emit event");
+        // console.log("emit event");
     }
 
     function requestQuery(

@@ -69,8 +69,8 @@ interface IAnalytic {
     error InvalidQuestionParam(string reason);
     error InvalidQuestionMetaParam(string reason);
     error InvalidQuestion(uint64 qId);
-    error QuestionClosed(uint64 qId);
-    error QuestionNotOpen(uint64 qId);
+    error QuestionAlreadyClosed(uint64 qId);
+    error QuestionNotOpenYet(uint64 qId);
     error AlreadyAnswered(uint64 qId, address sender);
     error MetaAnswerNumberNotMatch(uint64 qId, uint256 metaAnsLen, uint256 metaOptLen);
     error RejectAnswer(uint64 qId, address sender);
@@ -84,6 +84,7 @@ interface IAnalytic {
 
     // All the events
     event QuestionCreated(address indexed sender, uint64 indexed qId, uint256 startTime, uint256 endTime);
+    event QuestionClosed(uint64 indexed qId);
     event ConfirmAnswer(uint64 indexed qId, address indexed sender);
     event QueryRequestCreated(uint64 reqId, address owner);
     event QueryRequestDeleted(uint64 reqId);

@@ -30,6 +30,16 @@ export function QueryRequestsDialog({
     action: (logs) => setToRefetch(true),
   });
 
+  useWatchAndPerform({
+    eventName: "QueryExecutionRunning",
+    action: (logs) => setToRefetch(true),
+  });
+
+  useWatchAndPerform({
+    eventName: "QueryExecutionCompleted",
+    action: (logs) => setToRefetch(true),
+  });
+
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 

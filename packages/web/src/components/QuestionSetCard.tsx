@@ -26,6 +26,12 @@ export function QuestionSetCard({ qId }: { qId: number }) {
     action: (logs) => setToRefetch(true),
   });
 
+  useWatchAndPerform({
+    eventName: "QuestionClosed",
+    args: { qId },
+    action: (logs) => setToRefetch(true),
+  });
+
   const closeQuestion = async () => {
     if (!publicClient || !walletClient) return;
 
