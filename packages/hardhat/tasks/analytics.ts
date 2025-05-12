@@ -3,17 +3,11 @@ import { type TransactionReceipt, hexlify } from "ethers";
 import { task, types } from "hardhat/config";
 import { type HardhatRuntimeEnvironment } from "hardhat/types";
 
-import AnalyticJSON from "../artifacts/contracts/Analytic.sol/Analytic.json";
 import { getMockedFhevm } from "../mockedServices/client";
 import { newQuestionSpec } from "../test/analytic/helpers";
 import { PredicateOp } from "../test/analytic/types";
 
 dotenv.config();
-
-const AnalyticContract = {
-  address: process.env.NEXT_PUBLIC_ANALYTIC_ADDRESS || "",
-  abi: AnalyticJSON.abi,
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const questions: Record<string, any> = {
@@ -107,10 +101,10 @@ task("analytics:newQuestion", "Load a new question to the Analytic contract")
   .setAction(async ({ type }, hre) => {
     if (!questions[type]) throw new Error("Question type does not exist.");
 
-    console.log(`loading question type: ${type}`);
     const { main, metas } = questions[type];
 
     const [alice] = await hre.ethers.getSigners();
+    const AnalyticContract = await getAnalyticContract();
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address, alice);
 
     const currentTS = Math.floor(Date.now() / 1000);
@@ -120,7 +114,7 @@ task("analytics:newQuestion", "Load a new question to the Analytic contract")
     const tx = await analyticContract.newQuestion(main, metas, currentTS, endTS, queryThreshold);
     const receipt = await tx.wait();
 
-    parseReceiptEvents(receipt!, hre);
+    await parseReceiptEvents(receipt!, hre);
   });
 
 task("analytics:answer", "Answer a particular question")
@@ -132,6 +126,7 @@ task("analytics:answer", "Answer a particular question")
     if (!answers[type]) throw new Error("Answer type does not exist.");
     if (num < 1) throw new Error("parameter `num` has to be greater than 0");
 
+    const AnalyticContract = await getAnalyticContract();
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
 
     const signers = (await hre.ethers.getSigners()).slice(start, start + num);
@@ -158,7 +153,7 @@ task("analytics:answer", "Answer a particular question")
       const receipt = await tx.wait();
 
       console.log(`submitted ${idx + 1}/${loadedAns.length}`);
-      parseReceiptEvents(receipt!, hre);
+      await parseReceiptEvents(receipt!, hre);
 
       // sleep before running the next iteration
       if (idx !== loadedAns.length - 1) await sleep(600);
@@ -175,11 +170,13 @@ task("analytics:newQuery", "Create a query request")
 
     const queryRequest = queryRequests[type][qrType];
     const signer = (await hre.ethers.getSigners())[0];
+
+    const AnalyticContract = await getAnalyticContract();
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
     const tx = await analyticContract.connect(signer).requestQuery(qId, queryRequest);
     const receipt = await tx.wait();
 
-    parseReceiptEvents(receipt!, hre);
+    await parseReceiptEvents(receipt!, hre);
   });
 
 task("analytics:executeQuery", "Process Query Request")
@@ -187,11 +184,13 @@ task("analytics:executeQuery", "Process Query Request")
   .addParam("steps", "Number of steps to take", 5, types.int)
   .setAction(async ({ reqId, steps }, hre) => {
     const signer = (await hre.ethers.getSigners())[0];
+
+    const AnalyticContract = await getAnalyticContract();
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
     const tx = await analyticContract.connect(signer).executeQuery(reqId, steps);
     const receipt = await tx.wait();
 
-    parseReceiptEvents(receipt!, hre);
+    await parseReceiptEvents(receipt!, hre);
   });
 
 task("analytics:read", "Perform read action on Analytic contract")
@@ -199,6 +198,8 @@ task("analytics:read", "Perform read action on Analytic contract")
   .addPositionalParam("params", "parameters", "")
   .setAction(async ({ func, params }, hre) => {
     const signer = (await hre.ethers.getSigners())[0];
+
+    const AnalyticContract = await getAnalyticContract();
     const analyticContract = await hre.ethers.getContractAt("Analytic", AnalyticContract.address);
 
     if (!func || func.trim().length === 0) throw Error("read function is not defined");
@@ -210,8 +211,10 @@ task("analytics:read", "Perform read action on Analytic contract")
     console.log(result);
   });
 
-function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment, bPrint: boolean = true) {
+async function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvironment, bPrint: boolean = true) {
   const events = [];
+
+  const AnalyticContract = await getAnalyticContract();
   const iface = new hre.ethers.Interface(AnalyticContract.abi);
 
   for (const log of receipt.logs) {
@@ -226,4 +229,13 @@ function parseReceiptEvents(receipt: TransactionReceipt, hre: HardhatRuntimeEnvi
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getAnalyticContract() {
+  const AnalyticJSON = await import("../artifacts/contracts/Analytic.sol/Analytic.json");
+
+  return {
+    address: process.env.NEXT_PUBLIC_ANALYTIC_ADDRESS || "",
+    abi: AnalyticJSON.abi,
+  };
 }
