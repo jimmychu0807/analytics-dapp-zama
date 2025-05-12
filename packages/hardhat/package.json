@@ -20,7 +20,7 @@
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",
     "lint:ts:fix": "eslint --fix .",
-    "postinstall": "pnpm typechain",
+    "postinstall": "pnpm compile && pnpm typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "hardhat typechain",
