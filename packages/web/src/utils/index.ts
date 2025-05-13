@@ -13,6 +13,8 @@ import { cookieStorage, createConfig, createStorage, http } from "wagmi";
 import { hardhat, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
+export const zeroAddress: Address = "0x0000000000000000000000000000000000000000";
+
 export const maxMetas = 4;
 export const maxPredicates = 3;
 export const querySteps = 5;
