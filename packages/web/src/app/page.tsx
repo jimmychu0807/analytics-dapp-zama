@@ -11,7 +11,6 @@ export default function Home() {
   const {
     data: nextQuestionId,
     isSuccess,
-    error,
     status,
     queryKey,
   } = useReadContract({
@@ -21,7 +20,13 @@ export default function Home() {
 
   useWatchAndInvalidateQuery({ eventName: "QuestionCreated", queryKey });
 
-  if (status === "error") console.error("Read contract error:", error);
+  if (status === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-8">
+        Reading smart contract error.
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center gap-8">

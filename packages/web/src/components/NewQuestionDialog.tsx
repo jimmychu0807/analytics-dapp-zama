@@ -89,9 +89,11 @@ export function NewQuestionDialog() {
     setLoading(false);
   };
 
+  const account = walletClient?.account;
+
   return (
     <>
-      <Button variant="outline" size="lg" onClick={() => setDialogOpen(true)}>
+      <Button variant="outline" size="lg" disabled={!account} onClick={() => setDialogOpen(true)}>
         <MessageCircleQuestion />
         New Question
       </Button>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWatchAndPerform } from "@/hooks";
 import { type QuestionSet, QuestionState } from "@/types";
-import { analyticContract, formatDatetime, clientQuestionState } from "@/utils";
+import { analyticContract, formatDatetime, clientQuestionState, zeroAddress } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
 import { showToastMessage } from "@/utils/toast";
 import { useEffect, useState } from "react";
@@ -49,23 +49,22 @@ export function QuestionSetCard({ qId }: { qId: number }) {
 
   useEffect(() => {
     let isMounted = true;
-
     (async () => {
-      if (!publicClient || !walletClient || !toRefetch) return;
+      if (!publicClient || !toRefetch) return;
 
-      const address = walletClient.account.address;
+      const address = walletClient?.account?.address ?? zeroAddress;
       const [_questionSet, _ansLen, _isAdmin, _hasAnswered] = await Promise.all([
         publicClient.readContract({
           ...analyticContract,
           functionName: "getQuestion",
           args: [qId],
         }),
-        publicClient.readContract({
+        publicClient!.readContract({
           ...analyticContract,
           functionName: "getAnsLen",
           args: [qId],
         }),
-        publicClient.readContract({
+        publicClient!.readContract({
           ...analyticContract,
           functionName: "questionAdmins",
           args: [qId, address],
@@ -91,9 +90,14 @@ export function QuestionSetCard({ qId }: { qId: number }) {
     };
   }, [publicClient, walletClient, qId, toRefetch]);
 
+  useEffect(() => {
+    setToRefetch(true);
+  }, [walletClient]);
+
   if (!questionSet) return <div />;
 
   const cqs = clientQuestionState(questionSet);
+  const walletAcct = walletClient?.account;
 
   return (
     <Card className="w-[350px]">
@@ -123,15 +127,15 @@ export function QuestionSetCard({ qId }: { qId: number }) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center justify-center gap-x-4">
-        {!hasAnswered && cqs !== QuestionState.Closed && (
+        {walletAcct && !hasAnswered && cqs !== QuestionState.Closed && (
           <AnswerDialog qId={qId} questionSet={questionSet} />
         )}
-        {isAdmin && questionSet.state !== QuestionState.Closed && (
+        {walletAcct && isAdmin && questionSet.state !== QuestionState.Closed && (
           <Button variant="outline" onClick={closeQuestion}>
             Close
           </Button>
         )}
-        {isAdmin && (
+        {walletAcct && isAdmin && (
           <QueryRequestsDialog qId={qId} questionSet={questionSet} ansLen={ansLen ?? 0n} />
         )}
       </CardFooter>
