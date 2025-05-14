@@ -38,7 +38,7 @@ This is a confidential polling dApp that has the following features:
 
    Refer to the readme inside to understand the data structure and general development approaches:
 
-   - [**hardhat**](./packages/hardhat) package
+   - [**hardhat**](./packages/hardhat) package. Check the [Development Approach](./packages/hardhat/README.md#development-approach) on data structure and algorithm elaborations.
    - [**web**](./packages/web) package
 
 ## Development

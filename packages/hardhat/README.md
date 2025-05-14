@@ -28,9 +28,19 @@ Gateway contract deployed on the hardhat node may stop emitting events after abo
 
 ## Development Approach
 
-### Storage
+### Key Storage
+
+- `questions`: It is where user question sets are stored. A [question set](https://github.com/jimmychu0807/analytics-dapp-zama/blob/dce793fa6c513b4d05dd182ecf95752ba178269b/packages/hardhat/contracts/interfaces/IAnalytic.sol#L32) consists of one **main** question and up to four **meta** questions. Each question can be either `option` type, that answer can be one of the options, or `value` type, that answer to be within a specified min and max range.
+
+  It also contains the start and end time information when the question set is open to accept new answers, and the minimum answers needed for a question admin to issue a query request, `queryThreshold`.
+
+- `questionAnswers`: It contains answer sets received for question sets. An [**Answer**](https://github.com/jimmychu0807/analytics-dapp-zama/blob/dce793fa6c513b4d05dd182ecf95752ba178269b/packages/hardhat/contracts/interfaces/IAnalytic.sol#L63) object is a set of encrypted values corresponding to the question set, so there are multiple values in a single answer set. Currently we use `euint32` data type for all encrypted values to balance between possible range of data value (the higher the better) and fhEVM gas usage (the less the better).
+
+- `queryRequests`: A mapping of [**QueryRequest**](https://github.com/jimmychu0807/analytics-dapp-zama/blob/dce793fa6c513b4d05dd182ecf95752ba178269b/packages/hardhat/contracts/interfaces/IAnalytic.sol#L41) objects. It contains the corresponding question ID, owner, and predicates of a query. `acc` stores the accumulated result so far from execution. `accSteps` are number of answers that have been processed so far. This number starts from 0 and will reach the total number of answers of the question set. `ansCount` are number of answers that match the predicates and being included.
 
 ### Algorithm
+
+
 
 ## Hardhat Tasks
 
