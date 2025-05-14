@@ -2,7 +2,7 @@
 
 ## Overview
 
-A frontend built with next.js frontend web framework
+A frontend built with next.js frontend web framework.
 
 ## Development
 
@@ -13,10 +13,10 @@ pnpm install
 pnpm dev
 ```
 
-Visit http://localhost:3010 to see the page
+Visit http://localhost:3010 to view the application.
 
 Use `pnpm compile` to compile with **tsc** and perform type checking.
 
 There are a few caveats:
 
-- webpack will report circular dependencies when including fhEVM web workers. It needs to be further look into.
+- Webpack may report circular dependencies when including fhEVM web workers. This issue requires further investigation.
