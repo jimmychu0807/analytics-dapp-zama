@@ -6,7 +6,7 @@
 - 📜 Smart Contracts
   - **Analytic.sol**: [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
   - **QuestionSpecLib.sol**: [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
-- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d) - view this first (in 1.2x) if you want to quickly understand what the project is about and its features.
+- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d) - watch this first (at 1.2x speed) for a quick overview of the project and its features.
 - 📝 [Writeup](http://jimmychu0807.hk/analytics-zama)
 
 ## Overview
