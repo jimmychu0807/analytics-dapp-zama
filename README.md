@@ -4,9 +4,9 @@
 
 - 🌐 [Project website](https://analytics-zama.vercel.app)
 - 📜 Smart Contracts
-  - [Analytic.sol](./packages/hardhat/contracts/Analytic.sol): [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
-  - [QuestionSpecLib.sol](./packages/hardhat/contracts/QuestionSpecLib.sol): [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
-- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d)
+  - **Analytic.sol**: [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
+  - **QuestionSpecLib.sol**: [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
+- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d) - view this first (in 1.2x) if you want to quickly understand what the project is about and its features.
 - 📝 [Writeup](http://jimmychu0807.hk/analytics-zama)
 
 ## Overview
@@ -34,9 +34,9 @@ This is a confidential polling dApp that has the following features:
 
 4. Once a **Query Request** is created, the surveyer need to execute/process the query request for the query request to process the answers. This involves [intensive accumulation of FHE-encrypted answer values](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L315-L324) and lot of FHE gas may be consumed, so a `steps` parameter can be specified to determine how many answers to step through at a time and write the intermediate answer back to the storage. In practice, it seems processing 5 - 8 answers at a time is the sweet spot of having a small number of query execution while staying within the bound of 3,000,000 FHE gas limit per block.
 
-   Once a Query Request is fully processed, its query result could be fetched by the client side.
+   Once a Query Request is fully processed, its query result will be [rencrypted and decrypted](https://docs.zama.ai/fhevm/smart-contract/decryption/reencryption) by the client side.
 
-   For more details, refer to the readme inside:
+   Refer to the readme inside to understand the data structure and general development approaches:
 
    - [**hardhat**](./packages/hardhat) package
    - [**web**](./packages/web) package

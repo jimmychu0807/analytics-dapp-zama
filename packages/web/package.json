@@ -1,7 +1,15 @@
 {
-  "name": "web",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@jimmychu0807/analytics-zama-web",
+  "description": "Analytics dApp web",
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "author": {
+    "name": "Jimmy Chu",
+    "url": "https://jimmychu0807.hk"
+  },
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
@@ -49,5 +57,8 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.8",
     "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
