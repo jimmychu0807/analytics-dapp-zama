@@ -9,27 +9,52 @@ import { IAnalytic } from "./interfaces/IAnalytic.sol";
 import { QuestionSpecLib } from "./QuestionSpecLib.sol";
 // import { console } from "hardhat/console.sol";
 
+/**
+ * @title Analytic
+ * Module that allow users (question creators) to create analytic question set, and respondent
+ *   to answer these questions. Answers are encrypted client-side and stored on-chain. Later on, question
+ *   creators and query back on the answers with custom predicates.
+ * @author Jimmy Chu
+ */
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
+
     // --- library ---
+
     using QuestionSpecLib for QuestionSpecLib.QuestionSpec;
 
     // --- constant ---
+
+    /// @dev Maximum number of meta questions in a question set.
     uint16 public constant MAX_METAS = 4;
-    // has to correspond to the sie of enum StatsAnsPos
+    /// @dev Corresponding to the size of enum StatsAnsPos in IAnalytic.sol
     uint8 public constant STATS_ANS_SIZE = 3;
 
     // --- storage ---
-    uint64 public nextQuestionId = 0;
-    mapping(uint64 => Question) public questions;
-    mapping(uint64 => Answer[]) public questionAnswers;
-    mapping(uint64 => mapping(address => bool)) public questionAdmins;
-    mapping(uint64 => mapping(address => bool)) public hasAnswered;
 
+    /// @dev The next Question ID.
+    uint64 public nextQuestionId = 0;
+    /// @dev Mapping of question ID to the Question object.
+    mapping(uint64 => Question) public questions;
+    /// @dev Mapping of question ID to a list of Answer objects.
+    mapping(uint64 => Answer[]) public questionAnswers;
+    /// @dev Store for a question if a user is an admin.
+    mapping(uint64 => mapping(address => bool)) public questionAdmins;
+    /// @dev Store for a question if a user has answered it already.
+    mapping(uint64 => mapping(address => bool)) public hasAnswered;
+    /// @dev the next Query Request ID.
     uint64 public nextQueryRequestId = 0;
+    /// @dev Mapping of Query Request ID to the Query Request Object.
     mapping(uint64 => QueryRequest) public queryRequests;
+    /// @dev Mapping from users to the IDs of their query requests.
     mapping(address => uint64[]) public userQueries;
 
     // --- modifier ---
+
+    /**
+     * Modifier ensures the question ID is valid and the question is still open to answer.
+     * @dev It doesn't just plainly check its state but also check the question startTime and endTime.
+     * @param qId The Id of the question set to be checked
+     */
     modifier questionValidAndOpen(uint64 qId) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         Question storage question = questions[qId];
@@ -40,18 +65,32 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         _;
     }
 
+    /**
+     * Modifier ensures a user (sender) is the admin of the question.
+     * @param qId The Id of the question.
+     * @param sender The user.
+     */
     modifier isQuestionAdmin(uint64 qId, address sender) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         if (!questionAdmins[qId][sender]) revert NotQuestionAdmin(qId);
         _;
     }
 
+    /**
+     * Modifier ensures a question has number of answers above its query threshold
+     * @param qId The Id of the question set to check.
+     */
     modifier aboveQueryThreshold(uint64 qId) {
         Question storage question = questions[qId];
         if (getAnsLen(qId) < question.queryThreshold) revert QueryThresholdNotReach(qId);
         _;
     }
 
+    /**
+     * Modifier ensures a query request ID is valid and the user is the query request owner
+     * @param qId The query request ID
+     * @param sender The user
+     */
     modifier queryValidIsOwner(uint64 qId, address sender) {
         if (qId >= nextQueryRequestId) revert InvalidQueryRequest(qId);
         QueryRequest storage req = queryRequests[qId];
@@ -59,21 +98,41 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         _;
     }
 
-    // --- viewer ---
+    // --- viewer function ---
+
+    /**
+     * Get back the Question object given the question ID.
+     * @param qId The question ID.
+     * @return The Question object.
+     */
     function getQuestion(uint64 qId) public view returns (Question memory) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         return questions[qId];
     }
 
+    /**
+     * Get back the number of answers of the question.
+     * @param qId The question ID.
+     * @return The number of answers.
+     */
     function getAnsLen(uint64 qId) public view returns (uint256) {
         if (qId >= nextQuestionId) revert InvalidQuestion(qId);
         Answer[] memory answers = questionAnswers[qId];
         return answers.length;
     }
 
+    /**
+     * Get back an array of the `user` query request IDs with respect to a specified question ID `qId`.
+     * @param user The user
+     * @param qId The specified question ID.
+     * @return A list of query request ID that belong to the user for a given question ID.
+     */
     function getUserQueryRequestList(address user, uint64 qId) public view returns (uint64[] memory) {
         uint64[] storage queries = userQueries[user];
 
+        // We go through the query list twice.
+        // The first time to count number of answers that matches the qId
+        // The second time we add the query request ID to the result list.
         uint256 len = 0;
         for (uint256 i = 0; i < queries.length; i++) {
             QueryRequest storage qr = queryRequests[queries[i]];
@@ -95,11 +154,22 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         return list;
     }
 
+    /**
+     * Get the Query Request object of the given query request ID.
+     * @param reqId The query request ID.
+     * @return The Query Request object.
+     */
     function getQueryRequest(uint64 reqId) public view returns (QueryRequest memory) {
         QueryRequest storage req = queryRequests[reqId];
         return req;
     }
 
+    /**
+     * Get a Query Result object back of the given query request ID. It will only return if the
+     * query request has completed processing. Otherwise the function reverts.
+     * @param reqId The query request ID.
+     * @return The query result, which are fields extracted from the Query Request object.
+     */
     function getQueryResult(
         uint64 reqId
     ) public view queryValidIsOwner(reqId, msg.sender) returns (QueryResult memory) {
@@ -111,6 +181,15 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     }
 
     // --- write function ---
+
+    /**
+     * Store a new question set on-chain. The sender is also set to be the admin of the question set.
+     * @param _main The main question. It is a QuestionSpec object.
+     * @param _metas A list of meta questions. Each item is a QuestionSpec object.
+     * @param _startTime The starting time when the question accept answers.
+     * @param _endTime The ending time when the question will not accept new answers.
+     * @param _queryThreshold The minimum number of answers before a query request can be issued for the question.
+     */
     function newQuestion(
         QuestionSpecLib.QuestionSpec calldata _main,
         QuestionSpecLib.QuestionSpec[] calldata _metas,
@@ -210,15 +289,10 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
 
-        // console.log("sender: %s, reqId: %s, decValid: %s", sender, reqId, decValid);
-
         if (!decValid) revert RejectAnswer(qId, sender);
 
-        // valid Answer
+        // valid answer here
         euint32[] memory params = getParamsEUint32(reqId);
-
-        // console.log("qId: %s, param len: %s", qId, params.length);
-
         euint32[] memory metaVals = new euint32[](params.length - 1);
         for (uint256 i = 1; i < params.length; i++) {
             metaVals[i - 1] = params[i];
@@ -227,10 +301,8 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         Answer memory ans = Answer({ val: params[0], metaVals: metaVals });
         questionAnswers[qId].push(ans);
         hasAnswered[qId][sender] = true;
-        // console.log("answer len: %s", questionAnswers[qId].length);
 
         emit ConfirmAnswer(qId, sender);
-        // console.log("emit event");
     }
 
     function requestQuery(
@@ -288,8 +360,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         if (req.owner != msg.sender) revert NotQueryOwner(reqId);
         delete queryRequests[reqId];
 
-        // TODO: delete it from userQueries storage
-
         emit QueryRequestDeleted(reqId);
     }
 
@@ -343,7 +413,9 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
-    // --- Internal Helper methods ---
+    // --- internal helper function ---
+
+
     function _aggregateStatsAns(euint32[] storage acc, ebool accepted, Answer storage ans) internal {
         // min
         uint256 minPos = uint256(StatsAnsPos.Min);
