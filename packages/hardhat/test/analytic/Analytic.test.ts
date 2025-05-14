@@ -54,7 +54,7 @@ describe("Analytic", function () {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
-    const main = newQuestionSpec("Which L2 chains do you use most?", {
+    const main = newQuestionSpec("Which L2 chain do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"],
     });
 
@@ -120,7 +120,7 @@ describe("Analytic", function () {
     const currentTS = Math.floor(Date.now() / 1000);
     const endTS = currentTS + 1000; // in 1000 secs
 
-    const main = newQuestionSpec("Which L2 chains do you use most?", {
+    const main = newQuestionSpec("Which L2 chain do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era", "Starknet"],
     });
 
@@ -199,8 +199,6 @@ describe("Analytic", function () {
 
     printGasConsumed(await tx.wait(), "answer");
     await awaitAllDecryptionResults();
-
-    // TODO: how to check an error is thrown on awaitAllDecryptionResults()?
 
     // check the storage, no new answer should have added
     const hasAnswered = await this.analyticContract.hasAnswered(qId, signerAddr);

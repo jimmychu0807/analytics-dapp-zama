@@ -4,46 +4,46 @@
 
 - 🌐 [Project website](https://analytics-zama.vercel.app)
 - 📜 Smart Contracts
-  - [Analytic.sol](./packages/hardhat/contracts/Analytic.sol): [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
-  - [QuestionSpecLib.sol](./packages/hardhat/contracts/QuestionSpecLib.sol): [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
-- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d)
+  - **Analytic.sol**: [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
+  - **QuestionSpecLib.sol**: [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
+- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d) - view this first (in 1.2x) if you want to quickly understand what the project is about and its features.
 - 📝 [Writeup](http://jimmychu0807.hk/analytics-zama)
 
 ## Overview
 
-This repo is a solution to Zama Bounty Season 8: [Build a Confidential Benchmarking and Polling System On-chain](https://github.com/zama-ai/bounty-program/issues/144)
+This repo is a solution for Zama Bounty Season 8: [Build a Confidential Benchmarking and Polling System On-chain](https://github.com/zama-ai/bounty-program/issues/144)
 
-This is a confidential polling dApp that has the following features:
+This confidential polling dApp offers the following features:
 
-1. The surveyer can create a question set consists of a **main** question together with multiple **meta** questions, and each question can be either an option that allow answerer to pick one of the option or a value with a min and max range bound. An example of the question set would be:
+1. The question creator can define a question set consisting of a **main** question and up to four **meta** questions. Each question can be either an option where the respondent selects one choice), or a value (with specified minimum and maximum bounds).
 
-   Example 1:
-   - main: Which L2 chain do you use most? (option: OP Mainnet, Base, Arbitrum, Zk Sync).
-   - meta 1: Your Gender (option: male, female)
+   **Example 1**:
+   - Main: Which L2 chain do you use most? (options: OP Mainnet, Base, Arbitrum, Zk Sync).
+   - Meta 1: Your Gender (option: male, female)
    - meta 2: Your Age (value: 18 - 150)
 
-   Example 2:
-   - main: What is your annual salary (USD)? (value: 0 - 100,000,000)
-   - meta 1: Your Gender (option: male, female)
+   **Example 2**:
+   - Main: What is your annual salary (USD)? (value: 0 - 100,000,000)
+   - Meta 1: Your Gender (option: male, female)
 
    In practice, the meta question is capped to four in the application.
 
-2. Respondent answer sets are encrypted on the client-side before sending on-chain. The encrypted answer set [is checked](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L173-L187) on the smart contract side to be within the range specified. After the check, we will request the [validity flag](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L209) (a boolean) to be decrypted. The gateway will send the clear answer back to the smart contract. If the answer set is valid, it will be added to the corresponding storage.
+2. Respondent answer sets are encrypted client-side before being sent on-chain. The encrypted answer set is [validated](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L173-L187) by the smart contract to ensure values fall within the specified range, leveraging [**Fully Homomorphic Encryption**](https://mirror.xyz/privacy-scaling-explorations.eth/D8UHFW1t48x2liWb5wuP6LDdCRbgUH_8vOFvA0tNDJA) provided by the [fhEVM library](https://www.zama.ai/products-and-services/fhevm). After validation, the [validity flag](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L209) (a boolean) is decrypted. If the answer set is valid, it is stored on-chain.
 
-3. Once a question reach its query threshold, a **Query Request** can be raised by the surveyer with possibly multiple filters/predicates (these two terms are used interchangeably). If the **main** question is an **option** type, all the anwers that match the predicate will be tallied up and display. If the **main** question is a **value** type, its (min, mean, max) value will be computed. A **predicate** can be any of the **meta** question to be \[equal, not equal, greater than or equal, less than or equal\] to an option or a value.
+3. When a question set reaches its query threshold, the question creator can raise a **Query Request**with zero or multiple filters (predicates). If the **main** question is an **Option** type, all matching answers are tallied and displayed. If the **main** question is a **Value** type, the system computes the minimum, mean, and maximum. A **predicate** can apply to any **meta** question, using operators such as equal, not equal, greater than or equal, or less than or equal.
 
-4. Once a **Query Request** is created, the surveyer need to execute/process the query request for the query request to process the answers. This involves [intensive accumulation of FHE-encrypted answer values](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L315-L324) and lot of FHE gas may be consumed, so a `steps` parameter can be specified to determine how many answers to step through at a time and write the intermediate answer back to the storage. In practice, it seems processing 5 - 8 answers at a time is the sweet spot of having a small number of query execution while staying within the bound of 3,000,000 FHE gas limit per block.
+4. After a **Query Request** is created, the question creator must execute the query request to process the answers. This involves [accumulating FHE-encrypted answer values](https://github.com/jimmychu0807/analytics-dapp-zama/blob/9adb191f8359d95b3d5e0ab30ca039461542d747/packages/hardhat/contracts/Analytic.sol#L315-L324), which can be gas-intensive. A `steps` parameter specifies how many answers to process at a time, writing intermediate results to storage. In practice, processing 5 - 8 answers per step balances execution count with the 3,000,000 FHE gas limit per block.
 
-   Once a Query Request is fully processed, its query result could be fetched by the client side.
+   Once a Query Request is fully processed, the result is [re-encrypted and decrypted](https://docs.zama.ai/fhevm/smart-contract/decryption/reencryption) client-side.
 
-   For more details, refer to the readme inside:
+   For more details on data structures and development approach, see:
 
-   - [**hardhat**](./packages/hardhat) package
+   - [**hardhat**](./packages/hardhat) package - refer to [Development Approach](./packages/hardhat/README.md#development-approach) for details.
    - [**web**](./packages/web) package
 
 ## Development
 
-Run the following commands to run the project locally
+To run the project locally:
 
 ```sh
 cd /project-folder
@@ -67,6 +67,6 @@ pnpm test
 pnpm dev
 ```
 
-Visit http://localhost:3010 to check out the page.
+Visit http://localhost:3010 to view the app.
 
 ![project screenshot](./assets/project-screenshot.png)

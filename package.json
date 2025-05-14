@@ -1,7 +1,8 @@
 {
-  "name": "@jimmychu0807/analytics-dapp-zama",
-  "description": "Analytics dapp built on Zama",
+  "name": "@jimmychu0807/analytics-zama",
+  "description": "Analytics dApp built on Zama fhEVM",
   "version": "1.0.0",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   },

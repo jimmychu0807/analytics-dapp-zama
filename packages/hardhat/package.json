@@ -1,7 +1,8 @@
 {
-  "name": "@jimmychu0807/analytics-dapp-zama-hardhat",
-  "description": "fhEVM hardhat template",
+  "name": "@jimmychu0807/analytics-zama-hardhat",
+  "description": "Analytics dApp contracts",
   "version": "1.0.0",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -10,9 +11,9 @@
     "url": "https://jimmychu0807.hk"
   },
   "scripts": {
-    "dev": "concurrently --names 'hardhat,mocked-server' --prefix '[{name}]' \"pnpm hardhat node --tags Analytic\" \"pnpm mock-server\"",
-    "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
+    "dev": "concurrently --names 'hardhat,mocked-server' --prefix '[{name}]' \"pnpm node\" \"pnpm mock-server\"",
     "compile": "hardhat compile",
+    "node": "hardhat node --tags Analytic",
     "mock-server": "tsx mockedServices/server.ts ",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm lint:sol && pnpm typecheck && pnpm lint:ts && pnpm prettier:check",
@@ -20,10 +21,11 @@
     "lint:sol": "solhint --max-warnings 25 \"contracts/**/*.sol\"",
     "lint:ts": "eslint .",
     "lint:ts:fix": "eslint --fix .",
-    "postinstall": "pnpm compile && pnpm typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "typechain": "hardhat typechain",
+    "postinstall": "pnpm compile && pnpm typechain",
+    "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json && pnpm typechain",
     "test": "hardhat test --network hardhat test/analytic/Analytic.test.ts",
     "test:reportGas": "REPORT_GAS=true hardhat test --network hardhat test/analytic/Analytic.test.ts",
     "test:all": "hardhat test --network hardhat",
