@@ -8,7 +8,7 @@ export function WalletConnect({ requiredChainId }: { requiredChainId: number }) 
   const walletAccount = useAccount();
   const { data: walletBalance } = useBalance({
     address: walletAccount?.address,
-    query: { refetchInterval: 5000 },
+    query: { refetchInterval: 10000 },
   });
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();

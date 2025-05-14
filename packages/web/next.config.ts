@@ -18,13 +18,13 @@ const nextConfig: NextConfig = {
             key: "Access-Control-Allow-Headers",
             value: "Content-Type, Authorization",
           },
+          // {
+          //   key: "Cross-Origin-Embedder-Policy", // Matched parameters can be used in the key
+          //   value: "require-corp",
+          // },
           {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin", // Matched parameters can be used in the value
-          },
-          {
-            key: "Cross-Origin-Embedder-Policy", // Matched parameters can be used in the key
-            value: "require-corp",
           },
         ],
       },

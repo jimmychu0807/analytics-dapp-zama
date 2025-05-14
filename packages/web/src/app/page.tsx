@@ -3,11 +3,15 @@
 import { NewQuestionDialog } from "@/components/NewQuestionDialog";
 import { QuestionSetCard } from "@/components/QuestionSetCard";
 import { WalletConnect } from "@/components/WalletConnect";
-import { useWatchAndInvalidateQuery } from "@/hooks";
+import { useListenEventsAndAct } from "@/contexts/ListenEventsAndActContext";
 import { analyticContract, requiredChainId } from "@/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useReadContract } from "wagmi";
 
 export default function Home() {
+  const queryClient = useQueryClient();
+
   const {
     data: nextQuestionId,
     isSuccess,
@@ -18,7 +22,18 @@ export default function Home() {
     functionName: "nextQuestionId",
   });
 
-  useWatchAndInvalidateQuery({ eventName: "QuestionCreated", queryKey });
+  const listenEventAndAct = useListenEventsAndAct();
+
+  useEffect(() => {
+    if (!listenEventAndAct || !queryClient || !queryKey) return;
+
+    listenEventAndAct({
+      eventName: "QuestionCreated",
+      action: () => {
+        queryClient.invalidateQueries({ queryKey });
+      },
+    });
+  }, [listenEventAndAct, queryClient, queryKey]);
 
   if (status === "error") {
     return (

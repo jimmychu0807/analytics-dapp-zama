@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Analytics dApp built on Zama",
+  title: "Analytics dApp built on Zama fhEVM",
   description:
     "Analytic dApp allowing analysts to query on-chain confidential data with dynamic predicate.",
 };

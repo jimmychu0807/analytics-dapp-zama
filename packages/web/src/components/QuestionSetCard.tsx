@@ -2,7 +2,7 @@ import { AnswerDialog } from "@/components/AnswerDialog";
 import { QueryRequestsDialog } from "@/components/QueryRequestsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useWatchAndPerform } from "@/hooks";
+import { useListenEventsAndAct } from "@/contexts/ListenEventsAndActContext";
 import { type QuestionSet, QuestionState } from "@/types";
 import { analyticContract, formatDatetime, clientQuestionState, zeroAddress } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
@@ -19,18 +19,7 @@ export function QuestionSetCard({ qId }: { qId: number }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [hasAnswered, setHasAnswered] = useState<boolean>(false);
   const [toRefetch, setToRefetch] = useState<boolean>(true);
-
-  useWatchAndPerform({
-    eventName: "ConfirmAnswer",
-    args: { qId },
-    action: () => setToRefetch(true),
-  });
-
-  useWatchAndPerform({
-    eventName: "QuestionClosed",
-    args: { qId },
-    action: () => setToRefetch(true),
-  });
+  const listenEventAndAct = useListenEventsAndAct();
 
   const closeQuestion = async () => {
     if (!publicClient || !walletClient) return;
@@ -46,6 +35,26 @@ export function QuestionSetCard({ qId }: { qId: number }) {
       console.error("Error on closeQuestion:", (err as Error).message);
     }
   };
+
+  useEffect(() => {
+    if (!listenEventAndAct) return;
+
+    listenEventAndAct({
+      eventName: "ConfirmAnswer",
+      args: { qId: BigInt(qId) },
+      action: () => {
+        setToRefetch(true);
+      },
+    });
+
+    listenEventAndAct({
+      eventName: "QuestionClosed",
+      args: { qId: BigInt(qId) },
+      action: () => {
+        setToRefetch(true);
+      },
+    });
+  }, [listenEventAndAct, qId]);
 
   useEffect(() => {
     let isMounted = true;

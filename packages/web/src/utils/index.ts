@@ -9,7 +9,7 @@ import {
 import { questionSpecLibABI, analyticABI } from "@/abi";
 import { DateTime } from "luxon";
 import { type Address, formatEther as viemFormatEther } from "viem";
-import { cookieStorage, createConfig, createStorage, http } from "wagmi";
+import { cookieStorage, createConfig, createStorage, webSocket } from "wagmi";
 import { hardhat, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
@@ -54,8 +54,8 @@ export function getConfig() {
     }),
     ssr: true,
     transports: {
-      [hardhat.id]: http(ethRpcUrl),
-      [sepolia.id]: http(ethRpcUrl),
+      [hardhat.id]: webSocket(ethRpcUrl),
+      [sepolia.id]: webSocket(ethRpcUrl),
     },
   });
 }
