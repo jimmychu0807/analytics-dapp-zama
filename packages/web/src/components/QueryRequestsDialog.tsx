@@ -1,7 +1,7 @@
 import { NewQueryRequestDialog } from "@/components/NewQueryRequestDialog";
 import { QueryResultDialog } from "@/components/QueryResultDialog";
 import { Button } from "@/components/ui/button";
-import { useWatchAndPerform } from "@/hooks";
+import { useListenEventsAndAct } from "@/contexts/ListenEventsAndActContext";
 import { type QuestionSet, RequestState, type QueryRequest } from "@/types";
 import { analyticContract, querySteps } from "@/utils";
 import { sendAnalyticTransaction } from "@/utils/chainInteractions";
@@ -24,22 +24,7 @@ export function QueryRequestsDialog({
   const [queryRequestIds, setQueryRequestIds] = useState<bigint[]>([]);
   const [queryRequests, setQueryRequests] = useState<QueryRequest[]>([]);
   const [toRefetch, setToRefetch] = useState<boolean>(true);
-
-  useWatchAndPerform({
-    eventName: "QueryRequestCreated",
-    action: () => setToRefetch(true),
-  });
-
-  useWatchAndPerform({
-    eventName: "QueryExecutionRunning",
-    action: () => setToRefetch(true),
-  });
-
-  useWatchAndPerform({
-    eventName: "QueryExecutionCompleted",
-    action: () => setToRefetch(true),
-  });
-
+  const listenEventAndAct = useListenEventsAndAct();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
@@ -72,6 +57,31 @@ export function QueryRequestsDialog({
     }
     setLoading(undefined);
   };
+
+  useEffect(() => {
+    if (!listenEventAndAct) return;
+
+    listenEventAndAct({
+      eventName: "QueryRequestCreated",
+      action: () => {
+        setToRefetch(true);
+      },
+    });
+
+    listenEventAndAct({
+      eventName: "QueryExecutionRunning",
+      action: () => {
+        setToRefetch(true);
+      },
+    });
+
+    listenEventAndAct({
+      eventName: "QueryExecutionCompleted",
+      action: () => {
+        setToRefetch(true);
+      },
+    });
+  }, [listenEventAndAct]);
 
   useEffect(() => {
     let isMounted = true;

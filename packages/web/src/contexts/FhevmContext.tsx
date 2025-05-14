@@ -5,9 +5,7 @@ import { type MockedFhevmInstance, getMockedFhevm } from "@/utils/fhevmjsMocked"
 import { initFhevm, createInstance, type FhevmInstance } from "fhevmjs/web";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 
-export const FhevmContext = createContext<FhevmInstance | MockedFhevmInstance | undefined>(
-  undefined,
-);
+const FhevmContext = createContext<FhevmInstance | MockedFhevmInstance | undefined>(undefined);
 
 async function initCreateInstance() {
   const { kmsContractAddress, aclContractAddress, gatewayUrl } = fhevmConfig;

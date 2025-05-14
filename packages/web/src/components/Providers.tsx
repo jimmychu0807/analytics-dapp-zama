@@ -1,6 +1,7 @@
 "use client";
 
 import { FhevmProvider } from "@/contexts/FhevmContext";
+import { ListenEventsAndActProvider } from "@/contexts/ListenEventsAndActContext";
 import { getConfig } from "@/utils";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
@@ -13,7 +14,9 @@ export function Providers(props: { children: ReactNode; initialState?: State }) 
   return (
     <WagmiProvider config={config} initialState={props.initialState}>
       <QueryClientProvider client={queryClient}>
-        <FhevmProvider>{props.children}</FhevmProvider>
+        <ListenEventsAndActProvider>
+          <FhevmProvider>{props.children}</FhevmProvider>
+        </ListenEventsAndActProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

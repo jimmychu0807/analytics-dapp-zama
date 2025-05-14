@@ -12,7 +12,7 @@ dotenv.config();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const questions: Record<string, any> = {
   opt: {
-    main: newQuestionSpec("Which L2 chains do you use most?", {
+    main: newQuestionSpec("Which L2 chain do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
     metas: [],
@@ -22,19 +22,19 @@ const questions: Record<string, any> = {
     metas: [],
   },
   "opt-1opt": {
-    main: newQuestionSpec("Which L2 chains do you use most?", {
+    main: newQuestionSpec("Which L2 chain do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
     metas: [newQuestionSpec("Your gender", { options: ["Male", "Female"] })],
   },
   "opt-1val": {
-    main: newQuestionSpec("Which L2 chains do you use most?", {
+    main: newQuestionSpec("Which L2 chain do you use most?", {
       options: ["OP Mainnet", "Base", "Arbitrum One", "ZKsync Era"],
     }),
     metas: [newQuestionSpec("Your age", { min: 18, max: 150 })],
   },
   "val-1val": {
-    main: newQuestionSpec("What is your annual salary?", {
+    main: newQuestionSpec("What is your annual salary (USD)?", {
       min: 0,
       max: 1000000000,
     }),

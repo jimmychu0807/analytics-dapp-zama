@@ -9,7 +9,7 @@ import {
 import { questionSpecLibABI, analyticABI } from "@/abi";
 import { DateTime } from "luxon";
 import { type Address, formatEther as viemFormatEther } from "viem";
-import { cookieStorage, createConfig, createStorage, http } from "wagmi";
+import { cookieStorage, createConfig, createStorage, webSocket } from "wagmi";
 import { hardhat, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
@@ -32,7 +32,7 @@ export const explorerPrefix = "https://sepolia.etherscan.io/";
 export const projectInfo = {
   src: "https://github.com/jimmychu0807/analytics-dapp-zama",
   blog: "http://jimmychu0807.hk/analytics-zama",
-  video: "https://www.loom.com/share/d56411748acd44c0a61d4f2e6715be69",
+  video: "https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d",
 };
 
 export const questionSpecLib = {
@@ -54,8 +54,8 @@ export function getConfig() {
     }),
     ssr: true,
     transports: {
-      [hardhat.id]: http(ethRpcUrl),
-      [sepolia.id]: http(ethRpcUrl),
+      [hardhat.id]: webSocket(ethRpcUrl),
+      [sepolia.id]: webSocket(ethRpcUrl),
     },
   });
 }
