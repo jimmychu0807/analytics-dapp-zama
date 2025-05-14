@@ -30,7 +30,7 @@ Gateway contract deployed on the hardhat node may stop emitting events after abo
 
 ### Key Storage
 
-- `questions`: It is where user question sets are stored. A [question set](https://github.com/jimmychu0807/analytics-dapp-zama/blob/dce793fa6c513b4d05dd182ecf95752ba178269b/packages/hardhat/contracts/interfaces/IAnalytic.sol#L32) consists of one **main** question and up to four **meta** questions. Each question can be either `option` type, that answer can be one of the options, or `value` type, that answer to be within a specified min and max range.
+- `questions`: It is where user question sets are stored. A [**Question**](https://github.com/jimmychu0807/analytics-dapp-zama/blob/dce793fa6c513b4d05dd182ecf95752ba178269b/packages/hardhat/contracts/interfaces/IAnalytic.sol#L32) object consists of one **main** question and up to four **meta** questions. Each question can be either `option` type, that answer can be one of the options, or `value` type, that answer to be within a specified min and max range.
 
   It also contains the start and end time information when the question set is open to accept new answers, and the minimum answers needed for a question admin to issue a query request, `queryThreshold`.
 
@@ -40,7 +40,13 @@ Gateway contract deployed on the hardhat node may stop emitting events after abo
 
 ### Algorithm
 
+A few notable technique on FHE programming are used on the smart contract side. Inside [`Analytic.sol`](./contracts/Analytic.sol):
 
+1. In `answer()` function, it accepts encrypted answer set (the answers to the main question and meta questions) with an input proof. The answer is encrypted on the client side so its clear text is never transmitted over the internet. The function check all values are within their valid bounds, and finally only request to decrypt this boolean flag in `confirmOrRejectAnswer()`. In this way, respondent privacy is honored.
+
+2. A `queryThreshold` value is set for a [Question](https://github.com/jimmychu0807/analytics-dapp-zama/blob/106f29d91a53fb9b3bd57ce32f570c1b24c1cd02/packages/hardhat/contracts/interfaces/IAnalytic.sol#L38) object. Admin could only issue query to question sets with number of answers above this threshold. This value should be set to a reasonable level so respondent privacy is protected.
+
+3. In `executeQuery()` function, it steps through the answer sets one by one. First it checks the answer satisfy the predicates specified in the query, and then aggregate the result by either `_aggregateCountAns()` if the main question type is `Option`, or `_aggregateStatsAns()` if the main question type is `Value`.
 
 ## Hardhat Tasks
 
