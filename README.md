@@ -1,14 +1,17 @@
 # Analytics dApp built on Zama fhEVM
 
+## Project Artifacts
+
+- 🌐 [Project website](https://analytics-zama.vercel.app)
+- 📜 Smart Contracts
+  - [Analytic.sol](./packages/hardhat/contracts/Analytic.sol): [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
+  - [QuestionSpecLib.sol](./packages/hardhat/contracts/QuestionSpecLib.sol): [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
+- 🎥 [Demo Video](https://www.loom.com/share/13061bce424e4bed9d7f7551d3f5f33d)
+- 📝 [Writeup](http://jimmychu0807.hk/analytics-zama)
+
 ## Overview
 
 This repo is a solution to Zama Bounty Season 8: [Build a Confidential Benchmarking and Polling System On-chain](https://github.com/zama-ai/bounty-program/issues/144)
-
-- Project: https://analytics-zama.vercel.app/
-- Smart Contracts:
-  - [Analytic.sol](./packages/hardhat/contracts/Analytic.sol): [0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3](https://sepolia.etherscan.io/address/0x5366a157ca0FD369B843Acd1CfB15f31B541ccF3#code) on Sepolia
-  - [QuestionSpecLib.sol](./packages/hardhat/contracts/QuestionSpecLib.sol): [0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5](https://sepolia.etherscan.io/address/0x0Ea37D3264b940C94D68DA1EB34C291D62Ba8Ab5#code) on Sepolia
-- [Demo Video](https://www.loom.com/share/d56411748acd44c0a61d4f2e6715be69)
 
 This is a confidential polling dApp that has the following features:
 
