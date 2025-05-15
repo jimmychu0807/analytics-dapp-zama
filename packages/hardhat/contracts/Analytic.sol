@@ -5,9 +5,11 @@ import "fhevm/lib/TFHE.sol";
 import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
 import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
 import "fhevm/gateway/GatewayCaller.sol";
-import { IAnalytic } from "./interfaces/IAnalytic.sol";
+import { IAnalytic, STATS_ANS_SIZE } from "./interfaces/IAnalytic.sol";
 import { QuestionSpecLib } from "./QuestionSpecLib.sol";
-// import { console } from "hardhat/console.sol";
+
+/// @dev Maximum number of meta questions in a question set.
+uint16 constant MAX_METAS = 4;
 
 /**
  * @title Analytic
@@ -20,13 +22,6 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
     // --- library ---
 
     using QuestionSpecLib for QuestionSpecLib.QuestionSpec;
-
-    // --- constant ---
-
-    /// @dev Maximum number of meta questions in a question set.
-    uint16 public constant MAX_METAS = 4;
-    /// @dev Corresponding to the size of enum StatsAnsPos in IAnalytic.sol
-    uint8 public constant STATS_ANS_SIZE = 3;
 
     // --- storage ---
 
