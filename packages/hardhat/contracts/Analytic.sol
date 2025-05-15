@@ -17,7 +17,6 @@ import { QuestionSpecLib } from "./QuestionSpecLib.sol";
  * @author Jimmy Chu
  */
 contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCaller, IAnalytic {
-
     // --- library ---
 
     using QuestionSpecLib for QuestionSpecLib.QuestionSpec;
@@ -219,6 +218,10 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit QuestionCreated(msg.sender, qId, _startTime, _endTime);
     }
 
+    /**
+     * Close a question set to prevent the question from aceepting new answer set.
+     * @param qId The ID of the question to be closed.
+     */
     function closeQuestion(uint64 qId) public isQuestionAdmin(qId, msg.sender) {
         Question storage question = questions[qId];
         if (question.state != QuestionState.Closed) {
@@ -227,6 +230,18 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
+    /**
+     * Answer a question from a user
+     * @dev The function validates the answer to be inside the specified bounds in the question set.
+     *   This `eValid` eboolean flag is also encrypted and we cannot plainly read it, So we must
+     *   request to decrypt this value to the fhEVM gateway. We also add enough parameters to the
+     *   decryption request to reconstruct back the user and the answer set.
+     *
+     * @param qId The ID of the question set to answer.
+     * @param ans The encrypted answer to the main question of the question set.
+     * @param metaAns List of encrypted answers to the meta questions of the question set.
+     * @param inputProof The input proof for all the included encrypted values in calldata.
+     */
     function answer(
         uint64 qId,
         einput ans,
@@ -285,6 +300,12 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
+    /**
+     * To confirm or reject the answer based on the answer validity. Once valid, the encrypted answer
+     *   set is stored on-chain.
+     * @param reqId The request ID comes from fhEVM Gateway.
+     * @param decValid The decrypted value of a boolean flag indicating if the answer set is valid.
+     */
     function confirmOrRejectAnswer(uint256 reqId, bool decValid) external onlyGateway {
         uint64 qId = uint64(getParamsUint256(reqId)[0]);
         address sender = getParamsAddress(reqId)[0];
@@ -305,6 +326,11 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit ConfirmAnswer(qId, sender);
     }
 
+    /**
+     * To create a new query request on a specific question.
+     * @param qId The Id of the question user requests to query against.
+     * @param predicates A list of Predicate objects to filter the answers.
+     */
     function requestQuery(
         uint64 qId,
         Predicate[] calldata predicates
@@ -354,15 +380,43 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         emit QueryRequestCreated(reqId, msg.sender);
     }
 
+    /**
+     * To delete a query request specified in reqId
+     * @param reqId The reqId of the query request to be deleted.
+     */
     function deleteQuery(uint64 reqId) public queryValidIsOwner(reqId, msg.sender) {
         // Can only be deleted by the owner
         QueryRequest storage req = queryRequests[reqId];
         if (req.owner != msg.sender) revert NotQueryOwner(reqId);
+
+        // Delete from the `queryRequests` storage.
         delete queryRequests[reqId];
+
+        // Delete from the `userQueries` storage.
+        uint64[] storage queries = userQueries[msg.sender];
+        uint256 queryLen = queries.length;
+        for (uint256 i = 0; i < queryLen; i++) {
+            if (queries[i] == reqId) {
+                // As we don't care about the order in userQueries, we just
+                // take the array last element and overwrite the element to be removed,
+                queries[i] = queries[queryLen - 1];
+                // then remove the last element and adjust the array size.
+                queries.pop();
+                break;
+            }
+        }
 
         emit QueryRequestDeleted(reqId);
     }
 
+    /**
+     * To process an incomplete query request.
+     * @param reqId Id of the query request.
+     * @param steps Number of answers to step through. There is a gas limit on FHE operations
+     *   per block. Because of the variation on the complexity of the query predicates and number of options
+     *   in the main question, we allow users to specify this variable so they can experiment to
+     *   maximize processing efficiency while satisfy the block gas limit.
+     */
     function executeQuery(uint64 reqId, uint32 steps) public queryValidIsOwner(reqId, msg.sender) {
         QueryRequest storage req = queryRequests[reqId];
         if (req.state == RequestState.Completed) revert QueryHasCompleted(reqId);
@@ -415,7 +469,14 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
 
     // --- internal helper function ---
 
-
+    /**
+     * To aggregate one answer set into the accumulated result. This function perform accumulation for
+     *   question type of `Value`.
+     * @param acc The accumulated intermediate result stored on-chain.
+     * @param accepted The encrypted boolean value to indicate if the answer should be accumulated.
+     *   If this value is false, the accumulated result will not change.
+     * @param ans The answer set to be accumulated.
+     */
     function _aggregateStatsAns(euint32[] storage acc, ebool accepted, Answer storage ans) internal {
         // min
         uint256 minPos = uint256(StatsAnsPos.Min);
@@ -430,6 +491,15 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         acc[maxPos] = TFHE.select(accepted, TFHE.max(acc[maxPos], ans.val), acc[maxPos]);
     }
 
+    /**
+     * To aggregate one answer set into the accumulated result. This function perform accumulation for
+     *   question type of `Option`.
+     * @param acc The accumulated intermediate result stored on-chain.
+     * @param qId The ID of the question set the answer set `ans` corresponds to.
+     * @param accepted The encrypted boolean value to indicate if the answer should be accumulated.
+     *   If this value is false, the accumulated result will not change.
+     * @param ans The answer set to be accumulated.
+     */
     function _aggregateCountAns(euint32[] storage acc, uint64 qId, ebool accepted, Answer storage ans) internal {
         Question storage question = questions[qId];
         // Add count
@@ -445,6 +515,12 @@ contract Analytic is SepoliaZamaFHEVMConfig, SepoliaZamaGatewayConfig, GatewayCa
         }
     }
 
+    /**
+     * To check if an answer set satisfies a predicate.
+     * @param ans The answer set to check.
+     * @param predicate The predicate to check against.
+     * @return An ecrypted boolean value if the answer satisfies the predicate.
+     */
     function _checkPredicate(Answer storage ans, Predicate storage predicate) internal returns (ebool) {
         if (predicate.op == PredicateOp.EQ) return TFHE.eq(ans.metaVals[predicate.metaOpt], predicate.metaVal);
         if (predicate.op == PredicateOp.NE) return TFHE.ne(ans.metaVals[predicate.metaOpt], predicate.metaVal);

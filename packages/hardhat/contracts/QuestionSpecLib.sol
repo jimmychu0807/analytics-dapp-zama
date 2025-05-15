@@ -5,8 +5,8 @@ uint16 constant TXT_MAX_LEN = 512;
 
 library QuestionSpecLib {
     enum QuestionType {
-        Option, // For example 1 - count on the options pollers choose
-        Value // For example 2 - perform min,max,avg on the numeric ans people give
+        Option,
+        Value
     }
 
     struct QuestionSpec {
