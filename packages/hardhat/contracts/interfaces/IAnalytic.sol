@@ -4,6 +4,9 @@ pragma solidity ^0.8.24;
 import "fhevm/lib/TFHE.sol";
 import "../QuestionSpecLib.sol";
 
+/// @dev Corresponding to the size of enum StatsAnsPos
+uint8 constant STATS_ANS_SIZE = 3;
+
 interface IAnalytic {
     enum StatsAnsPos {
         Min,
