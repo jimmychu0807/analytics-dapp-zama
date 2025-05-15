@@ -34,7 +34,7 @@ This confidential polling dApp offers the following features:
 
    <img src="assets/03.png" alt="Answer" style="width: 400px"/>
 
-3. When a question set reaches its query threshold, the question creator can raise a **Query Request** with zero or multiple filters (predicates). If the **main** question is an **Option** type, all matching answers are tallied and displayed. If the **main** question is a **Value** type, the system computes the minimum, sum, and maximum. A **predicate** can apply to any **meta** question, using operators such as equal, not equal, greater than or equal, or less than or equal.
+3. When a question set reaches its query threshold, the question creator can raise a **Query Request** with zero or multiple predicates. If the **main** question is an **Option** type, all matching answers are tallied and displayed. If the **main** question is a **Value** type, the system computes the minimum, sum, and maximum. A **predicate** can apply to any **meta** question, using operators such as equal, not equal, greater than or equal, or less than or equal.
 
    <img src="assets/04.png" alt="Query Request" style="width: 400px"/>
 
